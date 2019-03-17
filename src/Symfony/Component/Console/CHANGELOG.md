@@ -6,6 +6,7 @@ CHANGELOG
 
  * added support for hyperlinks
  * added `ProgressBar::iterate()` method that simplify updating the progress bar when iterating
+ * added WordWrapping helper to console
 
 4.2.0
 -----
@@ -30,7 +31,7 @@ CHANGELOG
 
  * `OutputFormatter` throws an exception when unknown options are used
  * removed `QuestionHelper::setInputStream()/getInputStream()`
- * removed `Application::getTerminalWidth()/getTerminalHeight()` and 
+ * removed `Application::getTerminalWidth()/getTerminalHeight()` and
   `Application::setTerminalDimensions()/getTerminalDimensions()`
 * removed `ConsoleExceptionEvent`
 * removed `ConsoleEvents::EXCEPTION`
@@ -56,7 +57,7 @@ CHANGELOG
   with value optional explicitly passed empty
 * added console.error event to catch exceptions thrown by other listeners
 * deprecated console.exception event in favor of console.error
-* added ability to handle `CommandNotFoundException` through the 
+* added ability to handle `CommandNotFoundException` through the
  `console.error` event
 * deprecated default validation in `SymfonyQuestionHelper::ask`
 
@@ -72,7 +73,7 @@ CHANGELOG
 -----
 
  * added truncate method to FormatterHelper
- * added setColumnWidth(s) method to Table 
+ * added setColumnWidth(s) method to Table
 
 2.8.3
 -----
