@@ -20,7 +20,7 @@ use Symfony\Component\Console\Formatter\OutputFormatterInterface;
  */
 abstract class Helper implements HelperInterface
 {
-    const FORMAT_TAG_REGEX = '[a-z][a-z0-9,_=;-]*+';
+    const FORMAT_TAG_REGEX = '[a-z][^<>]*+';
 
     protected $helperSet = null;
 

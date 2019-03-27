@@ -183,7 +183,7 @@ class OutputFormatter implements WrappableOutputFormatterInterface
             if (!$open && !$tag) {
                 // </>
                 $this->styleStack->pop();
-            } elseif (false === $style = $this->createStyleFromString(strtolower($tag))) {
+            } elseif (false === $style = $this->createStyleFromString($tag)) {
                 $output .= $this->applyCurrentStyle($text);
             } elseif ($open) {
                 $this->styleStack->push($style);
