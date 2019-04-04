@@ -180,39 +180,56 @@ class OutputFormatterStyle implements VisitorOutputFormatterStyleInterface
      * @param string $text The text to style
      *
      * @return string
+     *
+     * @deprecated
      */
     public function apply($text)
     {
-        $setCodes = [];
-        $unsetCodes = [];
+        return sprintf("%s%s%s", $this->start(), $text, $this->close());
+    }
 
-        if (null === $this->handlesHrefGracefully) {
-            $this->handlesHrefGracefully = 'JetBrains-JediTerm' !== getenv('TERMINAL_EMULATOR');
-        }
+    public function start()
+    {
+        $setCodes = [];
 
         if (null !== $this->foreground) {
             $setCodes[] = $this->foreground['set'];
-            $unsetCodes[] = $this->foreground['unset'];
         }
         if (null !== $this->background) {
             $setCodes[] = $this->background['set'];
-            $unsetCodes[] = $this->background['unset'];
         }
 
         foreach ($this->options as $option) {
             $setCodes[] = $option['set'];
-            $unsetCodes[] = $option['unset'];
-        }
-
-        if (null !== $this->href && $this->handlesHrefGracefully) {
-            $text = "\033]8;;$this->href\033\\$text\033]8;;\033\\";
         }
 
         if (0 === \count($setCodes)) {
-            return $text;
+            return '';
         }
 
-        return sprintf("\033[%sm%s\033[%sm", implode(';', $setCodes), $text, implode(';', $unsetCodes));
+        return sprintf("\033[%sm", implode(';', $setCodes));
+    }
+
+    public function close()
+    {
+        $unsetCodes = [];
+
+        if (null !== $this->foreground) {
+            $unsetCodes[] = $this->foreground['unset'];
+        }
+        if (null !== $this->background) {
+            $unsetCodes[] = $this->background['unset'];
+        }
+
+        foreach ($this->options as $option) {
+            $unsetCodes[] = $option['unset'];
+        }
+
+        if (0 === \count($unsetCodes)) {
+            return '';
+        }
+
+        return sprintf("\033[%sm", implode(';', $unsetCodes));
     }
 
     public function start(): string
