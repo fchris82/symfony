@@ -1,4 +1,5 @@
-Lorem <comment>ipsum</comment> dolor sit amet: ht
+[TagToken<wrap=30,cut_words,cut_urls/>]
+Lorem [TagToken<comment>]ipsum[TagToken</comment>] dolor sit amet: ht
 tps://www.google.com/search?sa
 fe=off&ei=5jSGXIGbGofCkwWcpLGI
 BA&q=Lorem+ipsum+dolor+sit+ame
@@ -23,6 +24,6 @@ Simple long word.........: thi
 sisaverylongwordthisisaverylon
 gwordthisisaverylongword
 
-Long word with "tags": <question>thisisa
-verylongword<comment>thisisaverylongwor
-d</comment><info>thisisaverylongword</info></question>
+Long word with "tags": [TagToken<question>]thisisa
+verylongword[TagToken<comment>]thisisaverylongwor
+d[TagToken</comment>][TagToken<info>]thisisaverylongword[TagToken</info>][TagToken</question>]

@@ -12,8 +12,15 @@
 namespace Symfony\Component\Console\Formatter;
 
 use Symfony\Component\Console\Exception\InvalidArgumentException;
+use Symfony\Component\Console\Formatter\Visitors\DecoratorVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitors\HrefVisitor;
+use Symfony\Component\Console\Formatter\Visitors\OutputBuildVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
+use Symfony\Component\Console\Formatter\Visitors\StyleVisitor;
+use Symfony\Component\Console\Formatter\Visitors\VisitorIterator;
+use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
 use Symfony\Component\Console\Helper\Helper;
-use Symfony\Component\Console\Helper\WordWrapperHelper;
 
 /**
  * Formatter class for console output.
@@ -22,12 +29,14 @@ use Symfony\Component\Console\Helper\WordWrapperHelper;
  * @author Roland Franssen <franssen.roland@gmail.com>
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-class OutputFormatter implements WrappableOutputFormatterInterface
+class OutputFormatter implements OutputFormatterInterface
 {
-    private $decorated;
-    private $styles = [];
-    private $styleStack;
-    private $defaultWrapCutOption = WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING;
+    /** @var bool */
+    protected $decorated;
+    /** @var Lexer */
+    protected $lexer;
+    /** @var VisitorIterator|FormatterVisitorInterface[] */
+    protected $visitorIterator;
 
     /**
      * Escapes "<" special char in given text.
@@ -73,17 +82,37 @@ class OutputFormatter implements WrappableOutputFormatterInterface
     public function __construct(bool $decorated = false, array $styles = [])
     {
         $this->decorated = $decorated;
+        $this->lexer = new Lexer();
+        $this->visitorIterator = new VisitorIterator();
+        $this->initVisitors($styles);
+    }
 
-        $this->setStyle('error', new OutputFormatterStyle('white', 'red'));
-        $this->setStyle('info', new OutputFormatterStyle('green'));
-        $this->setStyle('comment', new OutputFormatterStyle('yellow'));
-        $this->setStyle('question', new OutputFormatterStyle('black', 'cyan'));
+    public function addVisitor(FormatterVisitorInterface $visitor, int $priority = 0): self
+    {
+        $this->visitorIterator->insert($visitor, $priority);
 
-        foreach ($styles as $name => $style) {
-            $this->setStyle($name, $style);
+        return $this;
+    }
+
+    protected function initVisitors(array $styles)
+    {
+        if ($this->visitorIterator->count() === 0) {
+            $this->addVisitor(new WrapperVisitor(), 999);
+            $this->addVisitor(new StyleVisitor($styles));
+            $this->addVisitor(new HrefVisitor());
+            $this->addVisitor(new PrintVisitor(), -999);
+        }
+    }
+
+    public function getVisitorByClass($class)
+    {
+        foreach ($this->visitorIterator as $visitor) {
+            if ($visitor instanceof $class) {
+                return $visitor;
+            }
         }
 
-        $this->styleStack = new OutputFormatterStyleStack();
+        throw new \InvalidArgumentException(sprintf('Missing visitor class: `%s`', $class));
     }
 
     /**
@@ -107,7 +136,9 @@ class OutputFormatter implements WrappableOutputFormatterInterface
      */
     public function setStyle($name, OutputFormatterStyleInterface $style)
     {
-        $this->styles[strtolower($name)] = $style;
+        /** @var StyleVisitor $styleVisitor */
+        $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
+        $styleVisitor->setStyle($name, $style);
     }
 
     /**
@@ -115,7 +146,9 @@ class OutputFormatter implements WrappableOutputFormatterInterface
      */
     public function hasStyle($name)
     {
-        return isset($this->styles[strtolower($name)]);
+        /** @var StyleVisitor $styleVisitor */
+        $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
+        return $styleVisitor->hasStyle($name);
     }
 
     /**
@@ -123,33 +156,9 @@ class OutputFormatter implements WrappableOutputFormatterInterface
      */
     public function getStyle($name)
     {
-        if (!$this->hasStyle($name)) {
-            throw new InvalidArgumentException(sprintf('Undefined style: %s', $name));
-        }
-
-        return $this->styles[strtolower($name)];
-    }
-
-    /**
-     * @return int
-     */
-    public function getDefaultWrapCutOption(): int
-    {
-        return $this->defaultWrapCutOption;
-    }
-
-    /**
-     * @param int $defaultWrapCutOption
-     *
-     * @return $this
-     *
-     * @see WordWrapperHelper
-     */
-    public function setDefaultWrapCutOption(int $defaultWrapCutOption)
-    {
-        $this->defaultWrapCutOption = $defaultWrapCutOption;
-
-        return $this;
+        /** @var StyleVisitor $styleVisitor */
+        $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
+        return $styleVisitor->getStyle($name);
     }
 
     /**
@@ -157,130 +166,24 @@ class OutputFormatter implements WrappableOutputFormatterInterface
      */
     public function format($message)
     {
-        $message = (string) $message;
-        $offset = 0;
-        $output = '';
-        preg_match_all(Helper::getFormatTagRegexPattern(), $message, $matches, PREG_OFFSET_CAPTURE);
-        foreach ($matches[0] as $i => $match) {
-            $pos = $match[1];
-            $text = $match[0];
-
-            if (0 != $pos && '\\' == $message[$pos - 1]) {
+        $fullTextTokens = $this->lexer->tokenize($message);
+        /** @var FormatterVisitorInterface $visitor */
+        foreach ($this->visitorIterator as $visitor) {
+            // skips the decorator visitors
+            if (!$this->isDecorated() && $visitor instanceof DecoratorVisitorInterface) {
                 continue;
             }
-
-            // add the text up to the next tag
-            $output .= $this->applyCurrentStyle(substr($message, $offset, $pos - $offset));
-            $offset = $pos + \strlen($text);
-
-            // opening tag?
-            if ($open = '/' != $text[1]) {
-                $tag = $matches[1][$i][0];
-            } else {
-                $tag = isset($matches[3][$i][0]) ? $matches[3][$i][0] : '';
+            $fullTextTokens->accept($visitor);
+        }
+        if ($visitor instanceof OutputBuildVisitorInterface) {
+            $output = $visitor->getOutput();
+            if (false !== strpos($output, "\0")) {
+                return strtr($output, "\0", '\\');
             }
 
-            if (!$open && !$tag) {
-                // </>
-                $this->styleStack->pop();
-            } elseif (false === $style = $this->createStyleFromString($tag)) {
-                $output .= $this->applyCurrentStyle($text);
-            } elseif ($open) {
-                $this->styleStack->push($style);
-            } else {
-                $this->styleStack->pop($style);
-            }
+            return $output;
         }
 
-        $output .= $this->applyCurrentStyle(substr($message, $offset));
-
-        if (false !== strpos($output, "\0")) {
-            return strtr($output, ["\0" => '\\', '\\<' => '<']);
-        }
-
-        return str_replace('\\<', '<', $output);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function formatAndWrap(string $message, int $width)
-    {
-        return $this->format($this->wordwrap($message, $width));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function wordwrap(string $message, int $width, int $cutOption = null): string
-    {
-        return WordWrapperHelper::wrap($message, $width, null === $cutOption ? $this->defaultWrapCutOption : $cutOption);
-    }
-
-    /**
-     * @return OutputFormatterStyleStack
-     */
-    public function getStyleStack()
-    {
-        return $this->styleStack;
-    }
-
-    /**
-     * Tries to create new style instance from string.
-     *
-     * @param string $string
-     *
-     * @return OutputFormatterStyle|false False if string is not format string
-     */
-    private function createStyleFromString(string $string)
-    {
-        if (isset($this->styles[$string])) {
-            return $this->styles[$string];
-        }
-
-        if (!preg_match_all('/([^=]+)=([^;]+)(;|$)/', $string, $matches, PREG_SET_ORDER)) {
-            return false;
-        }
-
-        $style = new OutputFormatterStyle();
-        foreach ($matches as $match) {
-            array_shift($match);
-            $match[0] = strtolower($match[0]);
-
-            if ('fg' == $match[0]) {
-                $style->setForeground(strtolower($match[1]));
-            } elseif ('bg' == $match[0]) {
-                $style->setBackground(strtolower($match[1]));
-            } elseif ('href' === $match[0]) {
-                $style->setHref($match[1]);
-            } elseif ('options' === $match[0]) {
-                preg_match_all('([^,;]+)', strtolower($match[1]), $options);
-                $options = array_shift($options);
-                foreach ($options as $option) {
-                    $style->setOption($option);
-                }
-            } else {
-                return false;
-            }
-        }
-
-        return $style;
-    }
-
-    /**
-     * Applies current style from stack to text, if must be applied.
-     */
-    private function applyCurrentStyle(string $text): string
-    {
-        if ($this->isDecorated() && \strlen($text) > 0) {
-            $lines = explode("\n", $text);
-            foreach ($lines as $i => $line) {
-                $lines[$i] = $this->styleStack->getCurrent()->apply($line);
-            }
-
-            return implode("\n", $lines);
-        }
-
-        return $text;
+        throw new InvalidArgumentException(sprintf('The last visitor should be implemented the `%s` interface!', OutputBuildVisitorInterface::class));
     }
 }
