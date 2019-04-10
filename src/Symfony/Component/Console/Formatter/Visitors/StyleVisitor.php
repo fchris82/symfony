@@ -1,9 +1,12 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: chris
- * Date: 2019.04.03.
- * Time: 20:00
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Component\Console\Formatter\Visitors;
@@ -20,6 +23,9 @@ use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
 use Symfony\Component\Console\Formatter\Tokens\TagToken;
 use Symfony\Component\Console\Formatter\Tokens\WordToken;
 
+/**
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
 {
     /** @var array|OutputFormatterStyle[] */
@@ -28,6 +34,11 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
     /** @var OutputFormatterStyleInterface */
     protected $currentStyle;
 
+    /**
+     * You can register custom styles next to base styles. You can override too the originals.
+     *
+     * @param array|OutputFormatterStyle[] $styles
+     */
     public function __construct(array $styles = [])
     {
         $this->setStyle('error', new OutputFormatterStyle('white', 'red'));
@@ -42,16 +53,36 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         $this->styleStack = new OutputFormatterStyleStack();
     }
 
+    /**
+     * Add a new style.
+     *
+     * @param string                        $name  The tag name: <{$name}>
+     * @param OutputFormatterStyleInterface $style The style
+     */
     public function setStyle(string $name, OutputFormatterStyleInterface $style)
     {
         $this->styles[strtolower($name)] = $style;
     }
 
+    /**
+     * Check a style by name.
+     *
+     * @param string $name
+     *
+     * @return bool
+     */
     public function hasStyle(string $name): bool
     {
         return isset($this->styles[strtolower($name)]);
     }
 
+    /**
+     * Get a style by name.
+     *
+     * @param string $name
+     *
+     * @return OutputFormatterStyle
+     */
     public function getStyle(string $name): OutputFormatterStyle
     {
         if (!$this->hasStyle($name)) {
@@ -61,15 +92,12 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         return $this->styles[strtolower($name)];
     }
 
-    public function visitFullText(FullTextToken $fullTextToken)
+    public function visitFullText(FullTextToken $fullTextToken): void
     {
         parent::visitFullText($fullTextToken);
     }
 
-    /**
-     * @param SeparatorToken $separatorToken
-     */
-    public function visitSeparator(SeparatorToken $separatorToken)
+    public function visitSeparator(SeparatorToken $separatorToken): void
     {
         // We close every line and start a new line
         if ($this->styleStack->count() && "\n" == $separatorToken->getOriginalStringRepresentation()) {
@@ -79,29 +107,32 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         }
     }
 
-    public function visitWord(WordToken $wordToken)
+    public function visitWord(WordToken $wordToken): void
     {
         // do nothing
     }
 
-    public function visitFullTagToken(FullTagToken $fullTagToken)
+    public function visitFullTagToken(FullTagToken $fullTagToken): void
     {
         if ($fullTagToken->isStartTag()) {
             array_push($this->tagStack, $fullTagToken);
         }
 
-        $iterator = $fullTagToken->getIterator();
-        for ($iterator->rewind();$iterator->valid();$iterator->next()) {
-            $iterator->current()->accept($this);
+        /** @var TagToken $tagToken */
+        foreach ($fullTagToken->getIterator() as $tagToken) {
+            $tagToken->accept($this);
         }
 
+        // If something was built in `visitTag()` method...
         if (null !== $this->currentStyle) {
+            // If something was started, we close it before "open" the new style.
             if ($this->styleStack->count() > 0) {
                 $prev = $this->styleStack->getCurrent();
                 $fullTagToken->insertBefore(new DecorationToken($prev->close()));
             }
             $this->styleStack->push(\count($this->tagStack), $this->currentStyle);
             $fullTagToken->insertAfter(new DecorationToken($this->currentStyle->start()));
+            // reset
             $this->currentStyle = null;
         }
         if ($fullTagToken->isCloseTag()) {
@@ -120,7 +151,7 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         }
     }
 
-    public function visitTag(TagToken $tagToken)
+    public function visitTag(TagToken $tagToken): void
     {
         if ($tagToken->getParent()->isStartTag()) {
             switch ($tagToken->getName()) {
@@ -157,15 +188,16 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         return $this->currentStyle;
     }
 
-    public function visitEos(EosToken $eosToken)
+    public function visitEos(EosToken $eosToken): void
     {
+        // It closes every opened style
         while ($this->styleStack->count()) {
             $style = $this->styleStack->pop();
             $eosToken->insertBefore(new DecorationToken($style->close()));
         }
     }
 
-    public function visitDecoration(DecorationToken $decorationToken)
+    public function visitDecoration(DecorationToken $decorationToken): void
     {
         // do nothing
     }

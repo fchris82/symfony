@@ -16,6 +16,7 @@ use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * @author Jean-François Simon <contact@jfsimon.fr>
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
 class OutputFormatterStyleStack implements ResetInterface
 {

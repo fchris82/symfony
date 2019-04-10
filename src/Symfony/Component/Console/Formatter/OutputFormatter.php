@@ -20,7 +20,6 @@ use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
 use Symfony\Component\Console\Formatter\Visitors\StyleVisitor;
 use Symfony\Component\Console\Formatter\Visitors\VisitorIterator;
 use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
-use Symfony\Component\Console\Helper\Helper;
 
 /**
  * Formatter class for console output.

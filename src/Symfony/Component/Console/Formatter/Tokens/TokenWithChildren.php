@@ -1,14 +1,21 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: chris
- * Date: 2019.04.03.
- * Time: 15:03
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Component\Console\Formatter\Tokens;
 
-
+/**
+ * It is a "special" token that has child tokens.
+ *
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 abstract class TokenWithChildren extends Token implements \IteratorAggregate
 {
     /**
@@ -16,6 +23,12 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
      */
     protected $children;
 
+    /**
+     * TokenWithChildren constructor. In most of case the parent will set later (if it exists)
+     *
+     * @param string     $originalStringRepresentationRepresentation
+     * @param Token|null $parent
+     */
     public function __construct(string $originalStringRepresentationRepresentation, Token $parent = null)
     {
         parent::__construct($originalStringRepresentationRepresentation, $parent);
@@ -23,12 +36,12 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
     }
 
     /**
-     * Retrieve an external iterator
+     * Retrieve a TokenStreamInterface object
      *
      * @link  http://php.net/manual/en/iteratoraggregate.getiterator.php
-     * @return \Traversable An instance of an object implementing <b>Iterator</b> or
-     * <b>Traversable</b>
-     * @since 5.0.0
+     *
+     * @return \Traversable|TokenStreamInterface An instance of an object implementing <b>Iterator</b> or
+     *                                           <b>Traversable</b>
      */
     public function getIterator(): TokenStreamInterface
     {
@@ -40,6 +53,13 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
         $this->children->removeToken($token);
     }
 
+    /**
+     * Push a new token to the end of the stream and set the parent.
+     *
+     * @param TokenInterface $token
+     *
+     * @return TokenInterface
+     */
     public function push(TokenInterface $token): TokenInterface
     {
         $this->children->push($token);
@@ -48,16 +68,27 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
         return $this;
     }
 
-    public function pop(): TokenInterface
+    /**
+     * Pop the last child. If the stream is empty, it will get null.
+     *
+     * @return TokenInterface|null
+     */
+    public function pop(): ?TokenInterface
     {
         return $this->children->pop();
     }
 
-    public function clean()
+    /**
+     * Remove all children
+     */
+    public function clean(): void
     {
         $this->children->clean();
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getLength(): int
     {
         $length = 0;
@@ -68,6 +99,9 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
         return $length;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function __toString(): string
     {
         $children = [];

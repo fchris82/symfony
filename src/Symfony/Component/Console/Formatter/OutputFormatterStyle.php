@@ -17,6 +17,7 @@ use Symfony\Component\Console\Exception\InvalidArgumentException;
  * Formatter style class for defining styles.
  *
  * @author Konstantin Kudryashov <ever.zet@gmail.com>
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
 class OutputFormatterStyle implements OutputFormatterStyleInterface
 {
@@ -181,7 +182,7 @@ class OutputFormatterStyle implements OutputFormatterStyleInterface
         return sprintf("%s%s%s", $this->start(), $text, $this->close());
     }
 
-    public function start()
+    public function start(): string
     {
         $setCodes = [];
 
@@ -203,7 +204,7 @@ class OutputFormatterStyle implements OutputFormatterStyleInterface
         return sprintf("\033[%sm", implode(';', $setCodes));
     }
 
-    public function close()
+    public function close(): string
     {
         $unsetCodes = [];
 

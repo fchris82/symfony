@@ -1,30 +1,40 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: chris
- * Date: 2019.03.29.
- * Time: 17:02
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Component\Console\Formatter\Tokens;
 
 use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
 
+/**
+ * Tag token is a "sub token"/children of the FullTagToken. Structure:
+ *
+ *      <tag1=option1,option2:value2>
+ *       ^^^^ ^^^^^^^^^^^^^^^^^^^^^^
+ *       name          value
+ *
+ *      Values: ['option1', 'option2:value2']
+ *
+ * @see FullTagToken
+ *
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 class TagToken extends Token
 {
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $name;
 
-    /**
-     * @var string
-     */
+    /** @var string */
     protected $value;
 
-    /**
-     * @var array
-     */
+    /** @var array|string[] */
     protected $values = [];
 
     /**
@@ -47,11 +57,16 @@ class TagToken extends Token
         }
     }
 
-    public function accept(FormatterVisitorInterface $formatterVisitor)
+    public function accept(FormatterVisitorInterface $formatterVisitor): void
     {
         $formatterVisitor->visitTag($this);
     }
 
+    /**
+     * Tokens are invisible so length of every token is 0.
+     *
+     * @return int
+     */
     public function getLength(): int
     {
         return 0;
@@ -91,6 +106,11 @@ class TagToken extends Token
         return parent::getParent();
     }
 
+    /**
+     * @param string $tagString
+     *
+     * @return TagToken
+     */
     public static function parse(string $tagString): self
     {
         if (\strpos($tagString, '=') !== false) {

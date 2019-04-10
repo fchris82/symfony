@@ -1,9 +1,12 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: chris
- * Date: 2019.04.03.
- * Time: 19:17
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Component\Console\Formatter\Visitors;
@@ -17,12 +20,17 @@ use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
 use Symfony\Component\Console\Formatter\Tokens\TagToken;
 use Symfony\Component\Console\Formatter\Tokens\WordToken;
 
+/**
+ * Visitors for handling <href> tags!
+ *
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
 {
     const START = "\e]8;;";
     const CLOSE = "\e\\";
 
-    public function visitFullText(FullTextToken $fullTextToken)
+    public function visitFullText(FullTextToken $fullTextToken): void
     {
         if ($this->handlesHrefGracefully()) {
             parent::visitFullText($fullTextToken);
@@ -34,17 +42,17 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         return !in_array(getenv('TERMINAL_EMULATOR'), ['JetBrains-JediTerm']);
     }
 
-    public function visitSeparator(SeparatorToken $separatorToken)
+    public function visitSeparator(SeparatorToken $separatorToken): void
     {
         // do nothing
     }
 
-    public function visitWord(WordToken $wordToken)
+    public function visitWord(WordToken $wordToken): void
     {
         // do nothing
     }
 
-    public function visitTag(TagToken $tagToken)
+    public function visitTag(TagToken $tagToken): void
     {
         if ('href' == $tagToken->getName()) {
             if ($tagToken->getParent()->isStartTag()) {
@@ -61,7 +69,7 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         }
     }
 
-    public function visitEos(EosToken $eosToken)
+    public function visitEos(EosToken $eosToken): void
     {
         /** @var FullTagToken $unclosedTag */
         while ($unclosedTag = array_pop($this->tagStack)) {
@@ -74,7 +82,7 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         }
     }
 
-    public function visitDecoration(DecorationToken $decorationToken)
+    public function visitDecoration(DecorationToken $decorationToken): void
     {
         // do nothing
     }

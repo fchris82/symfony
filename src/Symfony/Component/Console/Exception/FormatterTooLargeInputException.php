@@ -9,14 +9,11 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Visitors;
+namespace Symfony\Component\Console\Exception;
 
 /**
- * Use this interface for visitors that create outputs from token stream.
- *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-interface OutputBuildVisitorInterface
+class FormatterTooLargeInputException extends \InvalidArgumentException
 {
-    public function getOutput(): string;
 }

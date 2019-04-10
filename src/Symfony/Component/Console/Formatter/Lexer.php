@@ -1,15 +1,17 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: chris
- * Date: 2019.03.29.
- * Time: 12:53
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Component\Console\Formatter;
 
-
-use Symfony\Component\Console\Exception\FormatterToLargeInputException;
+use Symfony\Component\Console\Exception\FormatterTooLargeInputException;
 use Symfony\Component\Console\Formatter\Tokens\EosToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
 use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
@@ -17,11 +19,13 @@ use Symfony\Component\Console\Formatter\Tokens\WordToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Helper\Helper;
 
+/**
+ * Tokenize a custom text to handle styling and wrapping it.
+ *
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 class Lexer
 {
-    protected $text;
-    protected $cursor;
-    protected $end;
     /** @var FullTextToken */
     protected $fullTextToken;
 
@@ -37,8 +41,8 @@ class Lexer
         // Don't use here mb_* functions! The PREG_OFFSET_CAPTURE give use "byte" value!
         $end = \strlen($text);
         // 240x55 = 13200
-        if ($end > 13200 && \substr_count($text, ' ') > 10000) {
-            throw new FormatterToLargeInputException('The text, what you want to format, is too large. If you really want to format it, you should slice it.');
+        if ($end > 13200 && \substr_count($text, ' ') > 5000) {
+            throw new FormatterTooLargeInputException('The text, what you want to format, is too large. If you really want to format it, you should slice it.');
         }
         $this->fullTextToken = new FullTextToken($text);
         $pattern = sprintf('{\\\\?<((%1$s)|/(%1$s)?)>}ix', Helper::FORMAT_TAG_REGEX);
@@ -78,7 +82,7 @@ class Lexer
         return $this->fullTextToken;
     }
 
-    private function tokenizeTextBlock($textBlock)
+    protected function tokenizeTextBlock($textBlock)
     {
         $cursor = 0;
         // Don't use here mb_* functions! The PREG_OFFSET_CAPTURE give use "byte" value!

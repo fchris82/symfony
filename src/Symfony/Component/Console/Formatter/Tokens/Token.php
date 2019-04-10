@@ -1,16 +1,26 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: chris
- * Date: 2019.03.29.
- * Time: 13:54
+
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Component\Console\Formatter\Tokens;
 
+/**
+ * Abstract token class.
+ *
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 abstract class Token implements TokenInterface
 {
     /**
+     * The original string representation without any modification.
+     *
      * @var string
      */
     protected $originalStringRepresentation;
@@ -23,7 +33,8 @@ abstract class Token implements TokenInterface
     /**
      * Token constructor.
      *
-     * @param string $originalStringRepresentationRepresentation
+     * @param string     $originalStringRepresentationRepresentation
+     * @param Token|null $parent
      */
     public function __construct(string $originalStringRepresentationRepresentation, Token $parent = null)
     {
@@ -39,6 +50,7 @@ abstract class Token implements TokenInterface
     public function typeToString(): string
     {
         $path = explode('\\', get_class($this));
+
         return array_pop($path);
     }
 
@@ -50,14 +62,18 @@ abstract class Token implements TokenInterface
         return $this->originalStringRepresentation;
     }
 
-    public function setParent(TokenInterface $parent)
+    public function setParent(TokenWithChildren $parent = null): TokenInterface
     {
         $this->parent = $parent;
+
+        return $this;
     }
 
     /**
      * Be careful with this method! The iterator gets it in the next, if you don't step forward! You can run into
      * infinite loop!
+     *
+     * Insert a token after this.
      *
      * @param TokenInterface $token
      *
@@ -69,6 +85,11 @@ abstract class Token implements TokenInterface
         $this->getParent()->getIterator()->insertAfter($this, $token);
     }
 
+    /**
+     * Insert a token before this.
+     *
+     * @param TokenInterface $token
+     */
     public function insertBefore(TokenInterface $token): void
     {
         $token->setParent($this->getParent());
@@ -80,6 +101,11 @@ abstract class Token implements TokenInterface
         return $this->parent;
     }
 
+    /**
+     * Default it is the string length, but sometimes it is 0.
+     *
+     * @return int
+     */
     public function getLength(): int
     {
         return \mb_strlen($this->originalStringRepresentation);
@@ -114,14 +140,15 @@ abstract class Token implements TokenInterface
     public function remove(): void
     {
         $this->parent->removeChildren($this);
+        $this->parent = null;
     }
 
-    public function widthNextSibling(): bool
+    public function keepTogetherWithNextSibling(): bool
     {
         return false;
     }
 
-    public function widthPreviousSibling(): bool
+    public function keepTogetherWithPreviousSibling(): bool
     {
         return false;
     }

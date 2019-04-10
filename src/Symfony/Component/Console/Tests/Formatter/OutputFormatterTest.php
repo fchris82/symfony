@@ -12,9 +12,14 @@
 namespace Symfony\Component\Console\Tests\Formatter;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Exception\FormatterTooLargeInputException;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
+/**
+ * @author Fabien Potencier <fabien@symfony.com>
+ * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
+ */
 class OutputFormatterTest extends TestCase
 {
     public function testEmptyTag()
@@ -317,6 +322,15 @@ more text
 </info>
 EOF
         ));
+    }
+
+    /**
+     * @expectedException \Symfony\Component\Console\Exception\FormatterTooLargeInputException
+     */
+    public function testTooLargeInput()
+    {
+        $formatter = new OutputFormatter();
+        $formatter->format(str_repeat('a ', 10000));
     }
 }
 
