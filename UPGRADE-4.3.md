@@ -20,6 +20,7 @@ Config
 ------
 
  * Deprecated using environment variables with `cannotBeEmpty()` if the value is validated with `validate()`
+ * Deprecated the `root()` method in `TreeBuilder`, pass the root node information to the constructor instead
 
 DependencyInjection
 -------------------
@@ -38,10 +39,23 @@ DependencyInjection
           env(NAME): '1.5'
    ```
 
+Doctrine Bridge
+---------------
+
+ * Passing an `IdReader` to the `DoctrineChoiceLoader` when the query cannot be optimized with single id field has been deprecated, pass `null` instead
+ * Not passing an `IdReader` to the `DoctrineChoiceLoader` when the query can be optimized with single id field has been deprecated
+
+Dotenv
+------
+
+ * First parameter of `Dotenv::__construct()` will be changed from `true` to `false` in Symfony 5.0. A deprecation warning
+   is triggered if no parameter is provided. Use `$usePutenv = true` to upgrade without breaking changes.
+
 EventDispatcher
 ---------------
 
  * The signature of the `EventDispatcherInterface::dispatch()` method should be updated to `dispatch($event, string $eventName = null)`, not doing so is deprecated
+ * The `Event` class has been deprecated, use `Symfony\Contracts\EventDispatcher\Event` instead
 
 Form
 ----
@@ -85,6 +99,7 @@ HttpKernel
  * Renamed `GetResponseForControllerResultEvent` to `ViewEvent`
  * Renamed `GetResponseForExceptionEvent` to `ExceptionEvent`
  * Renamed `PostResponseEvent` to `TerminateEvent`
+ * Deprecated `TranslatorListener` in favor of `LocaleAwareListener`
 
 Messenger
 ---------
@@ -113,7 +128,7 @@ Security
  * The `Firewall::handleRequest()` method is deprecated, use `Firewall::callListeners()` instead.
  * The `AbstractToken::serialize()`, `AbstractToken::unserialize()`,
    `AuthenticationException::serialize()` and `AuthenticationException::unserialize()`
-   methods are now final, use `getState()` and `setState()` instead.
+   methods are now final, use `__serialize()` and `__unserialize()` instead.
 
    Before:
    ```php
@@ -131,22 +146,38 @@ Security
 
    After:
    ```php
-   protected function getState(): array
+   public function __serialize(): array
    {
-       return [$this->myLocalVar, parent::getState()];
+       return [$this->myLocalVar, parent::__serialize()];
    }
 
-   protected function setState(array $data)
+   public function __unserialize(array $data): void
    {
        [$this->myLocalVar, $parentData] = $data;
-       parent::setState($parentData);
+       parent::__unserialize($parentData);
    }
    ```
+
+ * The `Argon2iPasswordEncoder` class has been deprecated, use `SodiumPasswordEncoder` instead.
+ * Not implementing the methods `__serialize` and `__unserialize` in classes implementing
+   the `TokenInterface` is deprecated
+
+SecurityBundle
+--------------
+
+ * Configuring encoders using `argon2i` as algorithm has been deprecated, use `sodium` instead.
+
+TwigBridge
+----------
+
+ * deprecated the `$requestStack` and `$requestContext` arguments of the
+   `HttpFoundationExtension`, pass a `Symfony\Component\HttpFoundation\UrlHelper`
+   instance as the only argument instead
 
 Workflow
 --------
 
- * `initial_place` is deprecated in favour of `initial_places`.
+ * `initial_place` is deprecated in favour of `initial_marking`.
 
    Before:
    ```yaml
@@ -161,16 +192,8 @@ Workflow
    framework:
       workflows:
           article:
-              initial_places: [draft]
+              initial_marking: [draft]
    ```
-
-Yaml
-----
-
- * Using a mapping inside a multi-line string is deprecated and will throw a `ParseException` in 5.0.
-
-Workflow
---------
 
  * `MarkingStoreInterface::setMarking()` will have a third argument in Symfony 5.0.
 
@@ -200,19 +223,22 @@ Workflow
    ```yaml
    framework:
        workflows:
+           type: workflow
            article:
                marking_store:
                    type: multiple
+                   arguments: states
    ```
 
    After:
    ```yaml
    framework:
        workflows:
+           type: workflow
            article:
                marking_store:
                    type: method
-
+                   property: states
    ```
 
  * `SingleStateMarkingStore` is deprecated. Use `MethodMarkingStore` instead.
@@ -223,7 +249,30 @@ Workflow
        workflows:
            article:
                marking_store:
-                   type: single
+                   arguments: state
+   ```
+
+   After:
+   ```yaml
+   framework:
+       workflows:
+           type: state_machine
+           article:
+               marking_store:
+                   type: method
+                   property: state
+   ```
+
+ * Using a workflow with a single state marking is deprecated. Use a state machine instead.
+
+   Before:
+   ```yaml
+   framework:
+       workflows:
+           article:
+               type: workflow
+               marking_store:
+                   type: single_state
    ```
 
    After:
@@ -231,8 +280,13 @@ Workflow
    framework:
        workflows:
            article:
+               type: state_machine
                marking_store:
+                   # type: single_state # Since the single_state marking store is deprecated, use method instead
                    type: method
-                   arguments:
-                       - true
    ```
+
+Yaml
+----
+
+ * Using a mapping inside a multi-line string is deprecated and will throw a `ParseException` in 5.0.

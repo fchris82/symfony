@@ -201,11 +201,11 @@ class MessengerPass implements CompilerPassInterface
             throw new RuntimeException(sprintf('Invalid handler service "%s": class "%s" must have an "__invoke()" method.', $serviceId, $handlerClass->getName()));
         }
 
-        $parameters = $method->getParameters();
-        if (1 !== \count($parameters)) {
-            throw new RuntimeException(sprintf('Invalid handler service "%s": method "%s::__invoke()" must have exactly one argument corresponding to the message it handles.', $serviceId, $handlerClass->getName()));
+        if (0 === $method->getNumberOfRequiredParameters()) {
+            throw new RuntimeException(sprintf('Invalid handler service "%s": method "%s::__invoke()" requires at least one argument, first one being the message it handles.', $serviceId, $handlerClass->getName()));
         }
 
+        $parameters = $method->getParameters();
         if (!$type = $parameters[0]->getType()) {
             throw new RuntimeException(sprintf('Invalid handler service "%s": argument "$%s" of method "%s::__invoke()" must have a type-hint corresponding to the message class it handles.', $serviceId, $parameters[0]->getName(), $handlerClass->getName()));
         }
@@ -236,11 +236,11 @@ class MessengerPass implements CompilerPassInterface
             }
         }
 
+        $receiverNames = [];
+        foreach ($receiverMapping as $name => $reference) {
+            $receiverNames[(string) $reference] = $name;
+        }
         if ($container->hasDefinition('console.command.messenger_consume_messages')) {
-            $receiverNames = [];
-            foreach ($receiverMapping as $name => $reference) {
-                $receiverNames[(string) $reference] = $name;
-            }
             $buses = [];
             foreach ($busIds as $busId) {
                 $buses[$busId] = new Reference($busId);
@@ -249,6 +249,11 @@ class MessengerPass implements CompilerPassInterface
             $container->getDefinition('console.command.messenger_consume_messages')
                 ->replaceArgument(0, ServiceLocatorTagPass::register($container, $buses))
                 ->replaceArgument(3, array_values($receiverNames));
+        }
+
+        if ($container->hasDefinition('console.command.messenger_setup_transports')) {
+            $container->getDefinition('console.command.messenger_setup_transports')
+                ->replaceArgument(1, array_values($receiverNames));
         }
 
         $container->getDefinition('messenger.receiver_locator')->replaceArgument(0, $receiverMapping);

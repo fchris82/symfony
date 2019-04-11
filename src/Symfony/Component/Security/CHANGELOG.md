@@ -11,7 +11,7 @@ CHANGELOG
  * The `getRoles()` method of the `TokenInterface` is deprecated. Tokens must implement the `getRoleNames()`
    method instead and return roles as strings.
  * Made the `serialize()` and `unserialize()` methods of `AbstractToken` and
-  `AuthenticationException` final, use `getState()`/`setState()` instead
+  `AuthenticationException` final, use `__serialize()`/`__unserialize()` instead
  * `AuthenticationException` doesn't implement `Serializable` anymore
  * Deprecated the `ListenerInterface`, turn your listeners into callables instead
  * Deprecated `Firewall::handleRequest()`, use `Firewall::callListeners()` instead
@@ -19,6 +19,8 @@ CHANGELOG
  * Dispatch `AuthenticationFailureEvent` on `security.authentication.failure`
  * Dispatch `InteractiveLoginEvent` on `security.interactive_login`
  * Dispatch `SwitchUserEvent` on `security.switch_user`
+ * deprecated `Argon2iPasswordEncoder`, use `SodiumPasswordEncoder` instead
+ * Added methods `__serialize` and `__unserialize` to the `TokenInterface`
 
 4.2.0
 -----

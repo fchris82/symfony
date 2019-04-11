@@ -12,6 +12,7 @@
 namespace Symfony\Component\EventDispatcher;
 
 use Psr\EventDispatcher\StoppableEventInterface;
+use Symfony\Contracts\EventDispatcher\Event as ContractsEvent;
 
 /**
  * The EventDispatcherInterface is the central point of Symfony's event listener system.
@@ -70,7 +71,7 @@ class EventDispatcher implements EventDispatcherInterface
         }
 
         if ($listeners) {
-            $this->doDispatch($listeners, $eventName, $event);
+            $this->callListeners($listeners, $eventName, $event);
         }
 
         return $event;
@@ -229,7 +230,20 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function callListeners(iterable $listeners, string $eventName, $event)
     {
-        $this->doDispatch($listeners, $eventName, $event);
+        if ($event instanceof Event) {
+            $this->doDispatch($listeners, $eventName, $event);
+
+            return;
+        }
+
+        $stoppable = $event instanceof ContractsEvent || $event instanceof StoppableEventInterface;
+
+        foreach ($listeners as $listener) {
+            if ($stoppable && $event->isPropagationStopped()) {
+                break;
+            }
+            $listener($event instanceof Event ? $event : new WrappedEvent($event), $eventName, $this);
+        }
     }
 
     /**
@@ -237,10 +251,8 @@ class EventDispatcher implements EventDispatcherInterface
      */
     protected function doDispatch($listeners, $eventName, Event $event)
     {
-        $stoppable = $event instanceof Event || $event instanceof StoppableEventInterface;
-
         foreach ($listeners as $listener) {
-            if ($stoppable && $event->isPropagationStopped()) {
+            if ($event->isPropagationStopped()) {
                 break;
             }
             $listener($event, $eventName, $this);

@@ -19,6 +19,7 @@ use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\Lock\Store\SemaphoreStore;
+use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Messenger\MessageBusInterface;
 
 class ConfigurationTest extends TestCase
@@ -208,6 +209,7 @@ class ConfigurationTest extends TestCase
             'fragments' => [
                 'enabled' => false,
                 'path' => '/_fragment',
+                'hinclude_default_template' => null,
             ],
             'profiler' => [
                 'enabled' => false,
@@ -232,6 +234,8 @@ class ConfigurationTest extends TestCase
                 'mapping' => [
                     'paths' => [],
                 ],
+                'auto_mapping' => [],
+                'disable_not_compromised_password' => false,
             ],
             'annotations' => [
                 'cache' => 'php_array',
@@ -247,6 +251,7 @@ class ConfigurationTest extends TestCase
             'property_access' => [
                 'magic_call' => false,
                 'throw_exception_on_invalid_index' => false,
+                'throw_exception_on_invalid_property_path' => true,
             ],
             'property_info' => [
                 'enabled' => !class_exists(FullStack::class),
@@ -323,8 +328,8 @@ class ConfigurationTest extends TestCase
                 'enabled' => !class_exists(FullStack::class) && interface_exists(MessageBusInterface::class),
                 'routing' => [],
                 'transports' => [],
-                'serializer' => [
-                    'id' => 'messenger.transport.native_php_serializer',
+                'default_serializer' => 'messenger.transport.native_php_serializer',
+                'symfony_serializer' => [
                     'format' => 'json',
                     'context' => [],
                 ],
@@ -334,7 +339,11 @@ class ConfigurationTest extends TestCase
             'disallow_search_engine_index' => true,
             'http_client' => [
                 'enabled' => !class_exists(FullStack::class) && class_exists(HttpClient::class),
-                'clients' => [],
+                'scoped_clients' => [],
+            ],
+            'mailer' => [
+                'dsn' => 'smtp://null',
+                'enabled' => !class_exists(FullStack::class) && class_exists(Mailer::class),
             ],
         ];
     }

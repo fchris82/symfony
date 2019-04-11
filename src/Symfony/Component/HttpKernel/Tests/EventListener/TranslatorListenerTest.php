@@ -19,6 +19,9 @@ use Symfony\Component\HttpKernel\EventListener\TranslatorListener;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Contracts\Translation\LocaleAwareInterface;
 
+/**
+ * @group legacy
+ */
 class TranslatorListenerTest extends TestCase
 {
     private $listener;

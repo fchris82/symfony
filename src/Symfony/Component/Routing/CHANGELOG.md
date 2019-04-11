@@ -11,6 +11,7 @@ CHANGELOG
  * deprecated implementing `Serializable` for `Route` and `CompiledRoute`; if you serialize them, please
    ensure your unserialization logic can recover from a failure related to an updated serialization format
  * exposed `utf8` Route option, defaults "locale" and "format" in configuration loaders and configurators
+ * added support for invokable route loader services
 
 4.2.0
 -----
@@ -79,7 +80,7 @@ CHANGELOG
 
  * [DEPRECATION] The `ApacheMatcherDumper` and `ApacheUrlMatcher` were deprecated and
    will be removed in Symfony 3.0, since the performance gains were minimal and
-   it's hard to replicate the behaviour of PHP implementation.
+   it's hard to replicate the behavior of PHP implementation.
 
 2.3.0
 -----

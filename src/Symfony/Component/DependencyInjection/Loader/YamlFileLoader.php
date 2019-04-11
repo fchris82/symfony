@@ -284,7 +284,9 @@ class YamlFileLoader extends FileLoader
                 throw new InvalidArgumentException(sprintf('Parameter "bind" in "_defaults" must be an array in %s. Check your YAML syntax.', $file));
             }
 
-            $defaults['bind'] = array_map(function ($v) { return new BoundArgument($v); }, $this->resolveServices($defaults['bind'], $file));
+            foreach ($this->resolveServices($defaults['bind'], $file) as $argument => $value) {
+                $defaults['bind'][$argument] = new BoundArgument($value, true, BoundArgument::DEFAULTS_BINDING, $file);
+            }
         }
 
         return $defaults;
@@ -463,15 +465,17 @@ class YamlFileLoader extends FileLoader
                 if (isset($call['method'])) {
                     $method = $call['method'];
                     $args = isset($call['arguments']) ? $this->resolveServices($call['arguments'], $file) : [];
+                    $returnsClone = $call['returns_clone'] ?? false;
                 } else {
                     $method = $call[0];
                     $args = isset($call[1]) ? $this->resolveServices($call[1], $file) : [];
+                    $returnsClone = $call[2] ?? false;
                 }
 
                 if (!\is_array($args)) {
                     throw new InvalidArgumentException(sprintf('The second parameter for function call "%s" must be an array of its arguments for service "%s" in %s. Check your YAML syntax.', $method, $id, $file));
                 }
-                $definition->addMethodCall($method, $args);
+                $definition->addMethodCall($method, $args, $returnsClone);
             }
         }
 
@@ -532,6 +536,12 @@ class YamlFileLoader extends FileLoader
                 }
 
                 $bindings = array_merge($bindings, $this->resolveServices($service['bind'], $file));
+                $bindingType = $this->isLoadingInstanceof ? BoundArgument::INSTANCEOF_BINDING : BoundArgument::SERVICE_BINDING;
+                foreach ($bindings as $argument => $value) {
+                    if (!$value instanceof BoundArgument) {
+                        $bindings[$argument] = new BoundArgument($value, true, $bindingType, $file);
+                    }
+                }
             }
 
             $definition->setBindings($bindings);
@@ -571,12 +581,15 @@ class YamlFileLoader extends FileLoader
      *
      * @throws InvalidArgumentException When errors occur
      *
-     * @return string|array A parsed callable
+     * @return string|array|Reference A parsed callable
      */
     private function parseCallable($callable, $parameter, $id, $file)
     {
         if (\is_string($callable)) {
             if ('' !== $callable && '@' === $callable[0]) {
+                if (false === strpos($callable, ':')) {
+                    return [$this->resolveServices($callable, $file), '__invoke'];
+                }
                 throw new InvalidArgumentException(sprintf('The value of the "%s" option for the "%s" service must be the id of the service without the "@" prefix (replace "%s" with "%s").', $parameter, $id, $callable, substr($callable, 1)));
             }
 

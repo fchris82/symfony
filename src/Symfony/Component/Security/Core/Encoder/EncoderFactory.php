@@ -108,6 +108,13 @@ class EncoderFactory implements EncoderFactoryInterface
                     'arguments' => [$config['cost']],
                 ];
 
+            case 'sodium':
+                return [
+                    'class' => SodiumPasswordEncoder::class,
+                    'arguments' => [],
+                ];
+
+            /* @deprecated since Symfony 4.3 */
             case 'argon2i':
                 return [
                     'class' => Argon2iPasswordEncoder::class,

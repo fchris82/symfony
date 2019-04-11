@@ -65,7 +65,7 @@ class DebugCommandTest extends TestCase
 
     /**
      * @group legacy
-     * @expectedDeprecation Templates directory "%sResources/BarBundle/views" is deprecated since Symfony 4.2, use "%stemplates/bundles/BarBundle" instead.
+     * @expectedDeprecation Loading Twig templates from the "%sResources/BarBundle/views" directory is deprecated since Symfony 4.2, use "%stemplates/bundles/BarBundle" instead.
      */
     public function testDeprecationForWrongBundleOverridingInLegacyPath()
     {
@@ -289,7 +289,38 @@ TXT
         $this->assertContains('[OK]', $tester->getDisplay());
     }
 
-    private function createCommandTester(array $paths = [], array $bundleMetadata = [], string $defaultPath = null, string $rootDir = null, bool $useChainLoader = false): CommandTester
+    public function testWithGlobals()
+    {
+        $message = '<error>foo</error>';
+        $tester = $this->createCommandTester([], [], null, null, false, ['message' => $message]);
+        $tester->execute([], ['decorated' => true]);
+        $display = $tester->getDisplay();
+        $this->assertContains(\json_encode($message), $display);
+    }
+
+    public function testWithGlobalsJson()
+    {
+        $globals = ['message' => '<error>foo</error>'];
+        $tester = $this->createCommandTester([], [], null, null, false, $globals);
+        $tester->execute(['--format' => 'json'], ['decorated' => true]);
+        $display = $tester->getDisplay();
+        $display = \json_decode($display, true);
+        $this->assertSame($globals, $display['globals']);
+    }
+
+    public function testWithFilter()
+    {
+        $tester = $this->createCommandTester();
+        $tester->execute(['--format' => 'json'], ['decorated' => false]);
+        $display = $tester->getDisplay();
+        $display1 = \json_decode($display, true);
+        $tester->execute(['--filter' => 'date', '--format' => 'json'], ['decorated' => false]);
+        $display = $tester->getDisplay();
+        $display2 = \json_decode($display, true);
+        $this->assertNotSame($display1, $display2);
+    }
+
+    private function createCommandTester(array $paths = [], array $bundleMetadata = [], string $defaultPath = null, string $rootDir = null, bool $useChainLoader = false, array $globals = []): CommandTester
     {
         $projectDir = \dirname(__DIR__).\DIRECTORY_SEPARATOR.'Fixtures';
         $loader = new FilesystemLoader([], $projectDir);
@@ -305,8 +336,13 @@ TXT
             $loader = new ChainLoader([$loader]);
         }
 
+        $environment = new Environment($loader);
+        foreach ($globals as $name => $value) {
+            $environment->addGlobal($name, $value);
+        }
+
         $application = new Application();
-        $application->add(new DebugCommand(new Environment($loader), $projectDir, $bundleMetadata, $defaultPath, $rootDir));
+        $application->add(new DebugCommand($environment, $projectDir, $bundleMetadata, $defaultPath, $rootDir));
         $command = $application->find('debug:twig');
 
         return new CommandTester($command);

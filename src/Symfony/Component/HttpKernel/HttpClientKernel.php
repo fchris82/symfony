@@ -11,11 +11,10 @@
 
 namespace Symfony\Component\HttpKernel;
 
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Mime\Part\AbstractPart;
 use Symfony\Component\Mime\Part\DataPart;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
@@ -30,22 +29,18 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class HttpClientKernel implements HttpKernelInterface
 {
     private $client;
-    private $logger;
 
-    public function __construct(HttpClientInterface $client = null, LoggerInterface $logger = null)
+    public function __construct(HttpClientInterface $client = null)
     {
         if (!class_exists(HttpClient::class)) {
             throw new \LogicException(sprintf('You cannot use "%s" as the HttpClient component is not installed. Try running "composer require symfony/http-client".', __CLASS__));
         }
 
         $this->client = $client ?? HttpClient::create();
-        $this->logger = $logger ?? new NullLogger();
     }
 
     public function handle(Request $request, $type = HttpKernelInterface::MASTER_REQUEST, $catch = true)
     {
-        $this->logger->debug(sprintf('Request: %s %s', $request->getMethod(), $request->getUri()));
-
         $headers = $this->getHeaders($request);
         $body = '';
         if (null !== $part = $this->getBody($request)) {
@@ -58,9 +53,16 @@ final class HttpClientKernel implements HttpKernelInterface
             'max_redirects' => 0,
         ] + $request->attributes->get('http_client_options', []));
 
-        $this->logger->debug(sprintf('Response: %s %s', $response->getStatusCode(), $request->getUri()));
+        $response = new Response($response->getContent(!$catch), $response->getStatusCode(), $response->getHeaders(!$catch));
 
-        return new Response($response->getContent(!$catch), $response->getStatusCode(), $response->getHeaders(!$catch));
+        $response->headers = new class($response->headers->all()) extends ResponseHeaderBag {
+            protected function computeCacheControlValue()
+            {
+                return $this->getCacheControlHeader(); // preserve the original value
+            }
+        };
+
+        return $response;
     }
 
     private function getBody(Request $request): ?AbstractPart

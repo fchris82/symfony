@@ -25,6 +25,8 @@ use Symfony\Component\Cache\Adapter\DoctrineAdapter;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\ProxyAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
+use Symfony\Component\Config\Resource\DirectoryResource;
+use Symfony\Component\Config\Resource\FileExistenceResource;
 use Symfony\Component\DependencyInjection\ChildDefinition;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\ResolveInstanceofConditionalsPass;
@@ -35,6 +37,7 @@ use Symfony\Component\DependencyInjection\Loader\ClosureLoader;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpClient\ScopingHttpClient;
 use Symfony\Component\HttpKernel\DependencyInjection\LoggerPass;
 use Symfony\Component\Messenger\Tests\Fixtures\DummyMessage;
 use Symfony\Component\Messenger\Tests\Fixtures\SecondMessage;
@@ -50,8 +53,9 @@ use Symfony\Component\Serializer\Normalizer\JsonSerializableNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Translation\DependencyInjection\TranslatorPass;
 use Symfony\Component\Validator\DependencyInjection\AddConstraintValidatorsPass;
+use Symfony\Component\Validator\Mapping\Loader\PropertyInfoLoader;
+use Symfony\Component\Validator\Validation;
 use Symfony\Component\Workflow;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 abstract class FrameworkExtensionTest extends TestCase
 {
@@ -78,6 +82,7 @@ abstract class FrameworkExtensionTest extends TestCase
         $def = $container->getDefinition('property_accessor');
         $this->assertFalse($def->getArgument(0));
         $this->assertFalse($def->getArgument(1));
+        $this->assertTrue($def->getArgument(3));
     }
 
     public function testPropertyAccessWithOverriddenValues()
@@ -86,6 +91,7 @@ abstract class FrameworkExtensionTest extends TestCase
         $def = $container->getDefinition('property_accessor');
         $this->assertTrue($def->getArgument(0));
         $this->assertTrue($def->getArgument(1));
+        $this->assertFalse($def->getArgument(3));
     }
 
     public function testPropertyAccessCache()
@@ -151,6 +157,15 @@ abstract class FrameworkExtensionTest extends TestCase
 
         $this->assertFalse($container->hasDefinition('fragment.renderer.esi'), 'The ESI fragment renderer is not registered');
         $this->assertFalse($container->hasDefinition('esi'));
+    }
+
+    /**
+     * @group legacy
+     * @expectedException \LogicException
+     */
+    public function testAmbiguousWhenBothTemplatingAndFragments()
+    {
+        $this->createContainerFromFile('template_and_fragments');
     }
 
     public function testSsi()
@@ -271,15 +286,18 @@ abstract class FrameworkExtensionTest extends TestCase
         $this->assertGreaterThan(0, \count($registryDefinition->getMethodCalls()));
     }
 
+    /**
+     * @group legacy
+     */
     public function testWorkflowLegacy()
     {
         $container = $this->createContainerFromFile('workflow-legacy');
 
-        $this->assertTrue($container->hasDefinition('workflow.legacy'), 'Workflow is registered as a service');
-        $this->assertSame('workflow.abstract', $container->getDefinition('workflow.legacy')->getParent());
-        $this->assertTrue($container->hasDefinition('workflow.legacy.definition'), 'Workflow definition is registered as a service');
+        $this->assertTrue($container->hasDefinition('state_machine.legacy'), 'Workflow is registered as a service');
+        $this->assertSame('state_machine.abstract', $container->getDefinition('state_machine.legacy')->getParent());
+        $this->assertTrue($container->hasDefinition('state_machine.legacy.definition'), 'Workflow definition is registered as a service');
 
-        $workflowDefinition = $container->getDefinition('workflow.legacy.definition');
+        $workflowDefinition = $container->getDefinition('state_machine.legacy.definition');
 
         $this->assertSame(['draft'], $workflowDefinition->getArgument(2));
 
@@ -308,7 +326,7 @@ abstract class FrameworkExtensionTest extends TestCase
      */
     public function testWorkflowCannotHaveBothTypeAndService()
     {
-        $this->createContainerFromFile('workflow_with_type_and_service');
+        $this->createContainerFromFile('workflow_legacy_with_type_and_service');
     }
 
     /**
@@ -332,10 +350,11 @@ abstract class FrameworkExtensionTest extends TestCase
     /**
      * @expectedException \Symfony\Component\Config\Definition\Exception\InvalidConfigurationException
      * @expectedExceptionMessage "arguments" and "service" cannot be used together.
+     * @group legacy
      */
     public function testWorkflowCannotHaveBothArgumentsAndService()
     {
-        $this->createContainerFromFile('workflow_with_arguments_and_service');
+        $this->createContainerFromFile('workflow_legacy_with_arguments_and_service');
     }
 
     public function testWorkflowMultipleTransitionsWithSameName()
@@ -408,7 +427,7 @@ abstract class FrameworkExtensionTest extends TestCase
         ], $container->getDefinition($transitions[4])->getArguments());
     }
 
-    public function testGuardExpressions()
+    public function testWorkflowGuardExpressions()
     {
         $container = $this->createContainerFromFile('workflow_with_guard_expression');
 
@@ -648,6 +667,8 @@ abstract class FrameworkExtensionTest extends TestCase
         $container = $this->createContainerFromFile('messenger');
         $this->assertTrue($container->hasAlias('message_bus'));
         $this->assertTrue($container->getAlias('message_bus')->isPublic());
+        $this->assertTrue($container->hasAlias('messenger.default_bus'));
+        $this->assertTrue($container->getAlias('messenger.default_bus')->isPublic());
         $this->assertFalse($container->hasDefinition('messenger.transport.amqp.factory'));
         $this->assertTrue($container->hasDefinition('messenger.transport_factory'));
         $this->assertSame(TransportFactory::class, $container->getDefinition('messenger.transport_factory')->getClass());
@@ -659,15 +680,18 @@ abstract class FrameworkExtensionTest extends TestCase
         $this->assertTrue($container->hasDefinition('messenger.transport.default'));
         $this->assertTrue($container->getDefinition('messenger.transport.default')->hasTag('messenger.receiver'));
         $this->assertEquals([['alias' => 'default']], $container->getDefinition('messenger.transport.default')->getTag('messenger.receiver'));
+        $transportArguments = $container->getDefinition('messenger.transport.default')->getArguments();
+        $this->assertEquals(new Reference('messenger.default_serializer'), $transportArguments[2]);
 
         $this->assertTrue($container->hasDefinition('messenger.transport.customised'));
         $transportFactory = $container->getDefinition('messenger.transport.customised')->getFactory();
         $transportArguments = $container->getDefinition('messenger.transport.customised')->getArguments();
 
         $this->assertEquals([new Reference('messenger.transport_factory'), 'createTransport'], $transportFactory);
-        $this->assertCount(2, $transportArguments);
+        $this->assertCount(3, $transportArguments);
         $this->assertSame('amqp://localhost/%2f/messages?exchange_name=exchange_name', $transportArguments[0]);
-        $this->assertSame(['queue' => ['name' => 'Queue']], $transportArguments[1]);
+        $this->assertEquals(['queue' => ['name' => 'Queue']], $transportArguments[1]);
+        $this->assertEquals(new Reference('messenger.transport.native_php_serializer'), $transportArguments[2]);
 
         $this->assertTrue($container->hasDefinition('messenger.transport.amqp.factory'));
     }
@@ -691,29 +715,11 @@ abstract class FrameworkExtensionTest extends TestCase
         ], $sendersMapping[DummyMessage::class]->getValues());
     }
 
-    /**
-     * @expectedException \Symfony\Component\DependencyInjection\Exception\LogicException
-     * @expectedExceptionMessage The Messenger serializer cannot be enabled as the Serializer support is not available. Try enabling it or running "composer require symfony/serializer-pack".
-     */
-    public function testMessengerTransportConfigurationWithoutSerializer()
-    {
-        $this->createContainerFromFile('messenger_transport_no_serializer');
-    }
-
-    /**
-     * @expectedException \Symfony\Component\DependencyInjection\Exception\LogicException
-     * @expectedExceptionMessage The default AMQP transport is not available. Make sure you have installed and enabled the Serializer component. Try enabling it or running "composer require symfony/serializer-pack".
-     */
-    public function testMessengerAMQPTransportConfigurationWithoutSerializer()
-    {
-        $this->createContainerFromFile('messenger_amqp_transport_no_serializer');
-    }
-
     public function testMessengerTransportConfiguration()
     {
         $container = $this->createContainerFromFile('messenger_transport');
 
-        $this->assertSame('messenger.transport.symfony_serializer', (string) $container->getAlias('messenger.transport.serializer'));
+        $this->assertSame('messenger.transport.symfony_serializer', (string) $container->getAlias('messenger.default_serializer'));
 
         $serializerTransportDefinition = $container->getDefinition('messenger.transport.symfony_serializer');
         $this->assertSame('csv', $serializerTransportDefinition->getArgument(1));
@@ -750,6 +756,8 @@ abstract class FrameworkExtensionTest extends TestCase
 
         $this->assertTrue($container->hasAlias('message_bus'));
         $this->assertSame('messenger.bus.commands', (string) $container->getAlias('message_bus'));
+        $this->assertTrue($container->hasAlias('messenger.default_bus'));
+        $this->assertSame('messenger.bus.commands', (string) $container->getAlias('messenger.default_bus'));
     }
 
     /**
@@ -800,6 +808,26 @@ abstract class FrameworkExtensionTest extends TestCase
 
         $calls = $container->getDefinition('translator.default')->getMethodCalls();
         $this->assertEquals(['fr'], $calls[1][1][0]);
+
+        $nonExistingDirectories = array_filter(
+            $options['scanned_directories'],
+            function ($directory) {
+                return !file_exists($directory);
+            }
+        );
+
+        $this->assertNotEmpty($nonExistingDirectories, 'FrameworkBundle should pass non existing directories to Translator');
+
+        $resources = $container->getResources();
+        foreach ($resources as $resource) {
+            if ($resource instanceof DirectoryResource) {
+                $this->assertNotContains('translations', $resource->getResource());
+            }
+
+            if ($resource instanceof FileExistenceResource) {
+                $this->assertNotContains('translations', $resource->getResource());
+            }
+        }
     }
 
     /**
@@ -1055,6 +1083,23 @@ abstract class FrameworkExtensionTest extends TestCase
         $this->assertContains('foo.yml', $calls[4][1][0][0]);
         $this->assertContains('validation.yml', $calls[4][1][0][1]);
         $this->assertContains('validation.yaml', $calls[4][1][0][2]);
+    }
+
+    public function testValidationAutoMapping()
+    {
+        if (!class_exists(PropertyInfoLoader::class)) {
+            $this->markTestSkipped('Auto-mapping requires symfony/validation 4.2+');
+        }
+
+        $container = $this->createContainerFromFile('validation_auto_mapping');
+        $parameter = [
+            'App\\' => ['services' => ['foo', 'bar']],
+            'Symfony\\' => ['services' => ['a', 'b']],
+            'Foo\\' => ['services' => []],
+        ];
+
+        $this->assertSame($parameter, $container->getParameter('validator.auto_mapping'));
+        $this->assertTrue($container->hasDefinition('validator.property_info_loader'));
     }
 
     public function testFormsCanBeEnabledWithoutCsrfProtection()
@@ -1398,25 +1443,34 @@ abstract class FrameworkExtensionTest extends TestCase
         $this->assertTrue($container->hasDefinition('http_client'), '->registerHttpClientConfiguration() loads http_client.xml');
 
         $defaultOptions = [
-            'query' => [],
             'headers' => [],
             'resolve' => [],
         ];
         $this->assertSame([$defaultOptions, 4], $container->getDefinition('http_client')->getArguments());
 
         $this->assertTrue($container->hasDefinition('foo'), 'should have the "foo" service.');
-        $this->assertSame(HttpClientInterface::class, $container->getDefinition('foo')->getClass());
-        $this->assertSame([$defaultOptions, 4], $container->getDefinition('foo')->getArguments());
+        $this->assertSame(ScopingHttpClient::class, $container->getDefinition('foo')->getClass());
     }
 
     public function testHttpClientOverrideDefaultOptions()
     {
         $container = $this->createContainerFromFile('http_client_override_default_options');
 
-        $this->assertSame(['foo' => ['bar']], $container->getDefinition('http_client')->getArgument(0)['headers']);
+        $this->assertSame(['foo' => 'bar'], $container->getDefinition('http_client')->getArgument(0)['headers']);
         $this->assertSame(4, $container->getDefinition('http_client')->getArgument(1));
-        $this->assertSame(['bar' => ['baz'], 'foo' => ['bar']], $container->getDefinition('foo')->getArgument(0)['headers']);
-        $this->assertSame(5, $container->getDefinition('foo')->getArgument(1));
+
+        $expected = [
+            'http\://example\.com/' => [
+                'base_uri' => 'http://example.com',
+                'headers' => [
+                    'bar' => 'baz',
+                ],
+                'query' => [],
+                'resolve' => [],
+            ],
+        ];
+
+        $this->assertSame($expected, $container->getDefinition('foo')->getArgument(1));
     }
 
     public function testHttpClientFullDefaultOptions()
@@ -1425,12 +1479,9 @@ abstract class FrameworkExtensionTest extends TestCase
 
         $defaultOptions = $container->getDefinition('http_client')->getArgument(0);
 
-        $this->assertSame('foo:bar', $defaultOptions['auth_basic']);
-        $this->assertSame(['foo' => 'bar', 'bar' => 'baz'], $defaultOptions['query']);
-        $this->assertSame(['x-powered' => ['PHP']], $defaultOptions['headers']);
+        $this->assertSame(['X-powered' => 'PHP'], $defaultOptions['headers']);
         $this->assertSame(2, $defaultOptions['max_redirects']);
         $this->assertSame(2.0, (float) $defaultOptions['http_version']);
-        $this->assertSame('http://example.com', $defaultOptions['base_uri']);
         $this->assertSame(['localhost' => '127.0.0.1'], $defaultOptions['resolve']);
         $this->assertSame('proxy.org', $defaultOptions['proxy']);
         $this->assertSame(3.5, $defaultOptions['timeout']);

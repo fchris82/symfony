@@ -888,9 +888,18 @@ class FinderTest extends Iterator\RealIteratorTestCase
     }
 
     /**
-     * @expectedException \InvalidArgumentException
+     * @expectedException \Symfony\Component\Finder\Exception\DirectoryNotFoundException
      */
     public function testInWithNonExistentDirectory()
+    {
+        $finder = new Finder();
+        $finder->in('foobar');
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     */
+    public function testInWithNonExistentDirectoryLegacyException()
     {
         $finder = new Finder();
         $finder->in('foobar');
@@ -915,6 +924,10 @@ class FinderTest extends Iterator\RealIteratorTestCase
 
     public function testInWithGlobBrace()
     {
+        if (!\defined('GLOB_BRACE')) {
+            $this->markTestSkipped('Glob brace is not supported on this system.');
+        }
+
         $finder = $this->buildFinder();
         $finder->in([__DIR__.'/Fixtures/{A,copy/A}/B/C'])->getIterator();
 

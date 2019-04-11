@@ -394,6 +394,30 @@ class ObjectNormalizerTest extends TestCase
         );
     }
 
+    public function testObjectToPopulateNoMatch()
+    {
+        $classMetadataFactory = new ClassMetadataFactory(new AnnotationLoader(new AnnotationReader()));
+        $this->normalizer = new ObjectNormalizer($classMetadataFactory, null, null, new PhpDocExtractor());
+        new Serializer([$this->normalizer]);
+
+        $objectToPopulate = new ObjectInner();
+        $objectToPopulate->foo = 'foo';
+
+        $outer = $this->normalizer->denormalize([
+            'foo' => 'foo',
+            'inner' => [
+                'bar' => 'bar',
+            ],
+        ], ObjectOuter::class, null, [ObjectNormalizer::OBJECT_TO_POPULATE => $objectToPopulate]);
+
+        $this->assertInstanceOf(ObjectOuter::class, $outer);
+        $inner = $outer->getInner();
+        $this->assertInstanceOf(ObjectInner::class, $inner);
+        $this->assertNotSame($objectToPopulate, $inner);
+        $this->assertSame('bar', $inner->bar);
+        $this->assertNull($inner->foo);
+    }
+
     /**
      * @dataProvider provideCallbacks
      */
@@ -470,6 +494,17 @@ class ObjectNormalizerTest extends TestCase
 
         $this->assertEquals(
             ['fooBar' => 'foobar'],
+            $this->normalizer->normalize($obj, 'any')
+        );
+
+        $ignoredAttributes = ['foo', 'baz', 'camelCase', 'object'];
+        $legacy ? $this->normalizer->setIgnoredAttributes($ignoredAttributes) : $this->createNormalizer([ObjectNormalizer::IGNORED_ATTRIBUTES => $ignoredAttributes]);
+
+        $this->assertEquals(
+            [
+                'fooBar' => 'foobar',
+                'bar' => 'bar',
+            ],
             $this->normalizer->normalize($obj, 'any')
         );
     }
@@ -781,7 +816,11 @@ class ObjectNormalizerTest extends TestCase
                 $this->normalizer->setMaxDepthHandler($handler);
             }
         } else {
-            $this->createNormalizer([ObjectNormalizer::MAX_DEPTH_HANDLER => $handler], $classMetadataFactory);
+            $context = [];
+            if (null !== $handler) {
+                $context[ObjectNormalizer::MAX_DEPTH_HANDLER] = $handler;
+            }
+            $this->createNormalizer($context, $classMetadataFactory);
         }
         $this->serializer = new Serializer([$this->normalizer]);
         $this->normalizer->setSerializer($this->serializer);
@@ -1003,6 +1042,58 @@ class ObjectNormalizerTest extends TestCase
         $normalizer = new ObjectNormalizer(null, $nameConverter);
         $this->assertArrayHasKey('foo-Symfony\Component\Serializer\Tests\Normalizer\ObjectDummy-json-bar', $normalizer->normalize(new ObjectDummy(), 'json', ['foo' => 'bar']));
     }
+
+    public function testDefaultObjectClassResolver()
+    {
+        $normalizer = new ObjectNormalizer();
+
+        $obj = new ObjectDummy();
+        $obj->setFoo('foo');
+        $obj->bar = 'bar';
+        $obj->setBaz(true);
+        $obj->setCamelCase('camelcase');
+        $obj->unwantedProperty = 'notwanted';
+
+        $this->assertEquals(
+            [
+                'foo' => 'foo',
+                'bar' => 'bar',
+                'baz' => true,
+                'fooBar' => 'foobar',
+                'camelCase' => 'camelcase',
+                'object' => null,
+            ],
+            $normalizer->normalize($obj, 'any')
+        );
+    }
+
+    public function testObjectClassResolver()
+    {
+        $classResolver = function ($object) {
+            return ObjectDummy::class;
+        };
+
+        $normalizer = new ObjectNormalizer(null, null, null, null, null, $classResolver);
+
+        $obj = new ProxyObjectDummy();
+        $obj->setFoo('foo');
+        $obj->bar = 'bar';
+        $obj->setBaz(true);
+        $obj->setCamelCase('camelcase');
+        $obj->unwantedProperty = 'notwanted';
+
+        $this->assertEquals(
+            [
+                'foo' => 'foo',
+                'bar' => 'bar',
+                'baz' => true,
+                'fooBar' => 'foobar',
+                'camelCase' => 'camelcase',
+                'object' => null,
+            ],
+            $normalizer->normalize($obj, 'any')
+        );
+    }
 }
 
 class ObjectDummy
@@ -1062,6 +1153,11 @@ class ObjectDummy
     {
         return $this->object;
     }
+}
+
+class ProxyObjectDummy extends ObjectDummy
+{
+    public $unwantedProperty;
 }
 
 class ObjectConstructorDummy
@@ -1175,6 +1271,9 @@ class ObjectOuter
 {
     public $foo;
     public $bar;
+    /**
+     * @var ObjectInner
+     */
     private $inner;
     private $date;
 

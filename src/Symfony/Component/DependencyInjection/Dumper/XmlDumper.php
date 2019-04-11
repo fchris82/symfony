@@ -84,6 +84,9 @@ class XmlDumper extends Dumper
             if (\count($methodcall[1])) {
                 $this->convertParameters($methodcall[1], 'argument', $call);
             }
+            if ($methodcall[2] ?? false) {
+                $call->setAttribute('returns-clone', 'true');
+            }
             $parent->appendChild($call);
         }
     }
@@ -303,12 +306,12 @@ class XmlDumper extends Dumper
             } elseif ($value instanceof Reference) {
                 $element->setAttribute('type', 'service');
                 $element->setAttribute('id', (string) $value);
-                $behaviour = $value->getInvalidBehavior();
-                if (ContainerInterface::NULL_ON_INVALID_REFERENCE == $behaviour) {
+                $behavior = $value->getInvalidBehavior();
+                if (ContainerInterface::NULL_ON_INVALID_REFERENCE == $behavior) {
                     $element->setAttribute('on-invalid', 'null');
-                } elseif (ContainerInterface::IGNORE_ON_INVALID_REFERENCE == $behaviour) {
+                } elseif (ContainerInterface::IGNORE_ON_INVALID_REFERENCE == $behavior) {
                     $element->setAttribute('on-invalid', 'ignore');
-                } elseif (ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE == $behaviour) {
+                } elseif (ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE == $behavior) {
                     $element->setAttribute('on-invalid', 'ignore_uninitialized');
                 }
             } elseif ($value instanceof Definition) {

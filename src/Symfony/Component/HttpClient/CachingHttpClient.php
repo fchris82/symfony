@@ -46,7 +46,7 @@ class CachingHttpClient implements HttpClientInterface
         }
 
         $this->client = $client;
-        $kernel = new HttpClientKernel($client, $logger);
+        $kernel = new HttpClientKernel($client);
         $this->cache = new HttpCache($kernel, $store, null, $defaultOptions);
 
         unset($defaultOptions['debug']);
@@ -71,7 +71,7 @@ class CachingHttpClient implements HttpClientInterface
         $url = implode('', $url);
         $options['extra']['no_cache'] = $options['extra']['no_cache'] ?? !$options['buffer'];
 
-        if ($options['extra']['no_cache'] || !empty($options['body']) || !\in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
+        if (!empty($options['body']) || $options['extra']['no_cache'] || !\in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
             return $this->client->request($method, $url, $options);
         }
 
@@ -97,7 +97,7 @@ class CachingHttpClient implements HttpClientInterface
         $response = $this->cache->handle($request);
         $response = new MockResponse($response->getContent(), [
             'http_code' => $response->getStatusCode(),
-            'raw_headers' => $response->headers->allPreserveCase(),
+            'response_headers' => $response->headers->allPreserveCase(),
         ]);
 
         return MockResponse::fromRequest($method, $url, $options, $response);

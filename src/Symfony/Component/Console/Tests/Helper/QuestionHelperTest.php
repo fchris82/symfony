@@ -137,6 +137,9 @@ class QuestionHelperTest extends AbstractQuestionHelperTest
         $question->setMultiselect(true);
         $this->assertNull($questionHelper->ask($this->createStreamableInputInterfaceMock($inputStream, false), $this->createOutputInterface(), $question));
 
+        $question = new ChoiceQuestion('Who are your favorite superheros?', ['a' => 'Batman', 'b' => 'Superman'], 'a');
+        $this->assertSame('a', $questionHelper->ask($this->createStreamableInputInterfaceMock('', false), $this->createOutputInterface(), $question), 'ChoiceQuestion validator returns the key if it\'s a string');
+
         try {
             $question = new ChoiceQuestion('Who are your favorite superheros?', $heroes, '');
             $question->setMultiselect(true);
@@ -193,6 +196,67 @@ class QuestionHelperTest extends AbstractQuestionHelperTest
         $this->assertEquals('AcmeDemoBundle', $dialog->ask($this->createStreamableInputInterfaceMock($inputStream), $this->createOutputInterface(), $question));
         $this->assertEquals('AsseticBundle', $dialog->ask($this->createStreamableInputInterfaceMock($inputStream), $this->createOutputInterface(), $question));
         $this->assertEquals('FooBundle', $dialog->ask($this->createStreamableInputInterfaceMock($inputStream), $this->createOutputInterface(), $question));
+    }
+
+    public function testAskWithAutocompleteCallback()
+    {
+        if (!$this->hasSttyAvailable()) {
+            $this->markTestSkipped('`stty` is required to test autocomplete functionality');
+        }
+
+        // Po<TAB>Cr<TAB>P<DOWN ARROW><DOWN ARROW><NEWLINE>
+        $inputStream = $this->getInputStream("Pa\177\177o\tCr\t\033[A\033[A\033[A\n");
+
+        $dialog = new QuestionHelper();
+        $helperSet = new HelperSet([new FormatterHelper()]);
+        $dialog->setHelperSet($helperSet);
+
+        $question = new Question('What\'s for dinner?');
+
+        // A simple test callback - return an array containing the words the
+        // user has already completed, suffixed with all known words.
+        //
+        // Eg: If the user inputs "Potato C", the return will be:
+        //
+        //     ["Potato Carrot ", "Potato Creme ", "Potato Curry ", ...]
+        //
+        // No effort is made to avoid irrelevant suggestions, as this is handled
+        // by the autocomplete function.
+        $callback = function ($input) {
+            $knownWords = [
+                'Carrot',
+                'Creme',
+                'Curry',
+                'Parsnip',
+                'Pie',
+                'Potato',
+                'Tart',
+            ];
+
+            $inputWords = explode(' ', $input);
+            $lastInputWord = array_pop($inputWords);
+            $suggestionBase = $inputWords
+                ? implode(' ', $inputWords).' '
+                : '';
+
+            return array_map(
+                function ($word) use ($suggestionBase) {
+                    return $suggestionBase.$word.' ';
+                },
+                $knownWords
+            );
+        };
+
+        $question->setAutocompleterCallback($callback);
+
+        $this->assertSame(
+            'Potato Creme Pie',
+            $dialog->ask(
+                $this->createStreamableInputInterfaceMock($inputStream),
+                $this->createOutputInterface(),
+                $question
+            )
+        );
     }
 
     public function testAskWithAutocompleteWithNonSequentialKeys()

@@ -4,13 +4,37 @@ CHANGELOG
 4.3.0
 -----
 
+ * Added optional `MessageCountAwareInterface` that receivers can implement
+   to give information about how many messages are waiting to be processed.
+ * [BC BREAK] The `Envelope::__construct()` signature changed:
+   you can no longer pass an unlimited number of stamps as the second,
+   third, fourth, arguments etc: stamps are now an array passed to the
+   second argument.
+ * [BC BREAK] The `MessageBusInterface::dispatch()` signature changed:
+   a second argument `array $stamps = []` was added.
+ * Added new `messenger:stop-workers` command that sends a signal
+   to stop all `messenger:consume` workers.
+ * [BC BREAK] The `TransportFactoryInterface::createTransport()` signature
+   changed: a required 3rd `SerializerInterface` argument was added.
+ * Added a new `SyncTransport` along with `ForceCallHandlersStamp` to
+   explicitly handle messages synchronously.
+ * Added `AmqpStamp` allowing to provide a routing key, flags and attributes on message publishing.
+ * [BC BREAK] Removed publishing with a `routing_key` option from queue configuration, for
+   AMQP. Use exchange `default_publish_routing_key` or `AmqpStamp` instead.
+ * [BC BREAK] Changed the `queue` option in the AMQP transport DSN to be `queues[name]`. You can 
+   therefore name the queue but also configure `binding_keys`, `flags` and `arguments`.
+ * [BC BREAK] The methods `get`, `ack`, `nack` and `queue` of the AMQP `Connection` 
+   have a new argument: the queue name.
+ * Added optional parameter `prefetch_count` in connection configuration, 
+   to setup channel prefetch count.
  * New classes: `RoutableMessageBus`, `AddBusNameStampMiddleware`
    and `BusNameStamp` were added, which allow you to add a bus identifier
    to the `Envelope` then find the correct bus when receiving from
    the transport. See `ConsumeMessagesCommand`.
  * The optional `$busNames` constructor argument of the class `ConsumeMessagesCommand` was removed.
- * [BC BREAK] 2 new methods were added to `ReceiverInterface`:
-   `ack()` and `reject()`.
+ * [BC BREAK] 3 new methods were added to `ReceiverInterface`:
+   `ack()`, `reject()` and `get()`. The methods `receive()`
+   and `stop()` were removed.
  * [BC BREAK] Error handling was moved from the receivers into
    `Worker`. Implementations of `ReceiverInterface::handle()`
    should now allow all exceptions to be thrown, except for transport
@@ -22,7 +46,9 @@ CHANGELOG
  * The default command name for `ConsumeMessagesCommand` was
    changed from `messenger:consume-messages` to `messenger:consume`
  * `ConsumeMessagesCommand` has two new optional constructor arguments
- * `Worker` has 4 new option constructor arguments.
+ * [BC BREAK] The first argument to Worker changed from a single
+   `ReceiverInterface` to an array of `ReceiverInterface`.
+ * `Worker` has 3 new optional constructor arguments.
  * The `Worker` class now handles calling `pcntl_signal_dispatch()` the
    receiver no longer needs to call this.
  * The `AmqpSender` will now retry messages using a dead-letter exchange
@@ -50,6 +76,10 @@ CHANGELOG
  * [BC BREAK] The Amqp Transport now automatically sets up the exchanges
    and queues by default. Previously, this was done when in "debug" mode
    only. Pass the `auto_setup` connection option to control this.
+ * Added a `SetupTransportsCommand` command to setup the transports
+ * Added a Doctrine transport. For example, use the `doctrine://default` DSN (this uses the `default` Doctrine entity manager)
+ * [BC BREAK] The `getConnectionConfiguration` method on Amqp's `Connection` has been removed. 
+ * [BC BREAK] A `HandlerFailedException` exception will be thrown if one or more handler fails.
 
 4.2.0
 -----

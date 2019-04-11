@@ -12,10 +12,10 @@
 namespace Symfony\Component\Messenger\Transport\Serialization;
 
 use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\Exception\InvalidArgumentException;
 use Symfony\Component\Messenger\Exception\LogicException;
 use Symfony\Component\Messenger\Exception\MessageDecodingFailedException;
 use Symfony\Component\Messenger\Stamp\SerializerStamp;
+use Symfony\Component\Messenger\Stamp\StampInterface;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
 use Symfony\Component\Serializer\Encoder\XmlEncoder;
 use Symfony\Component\Serializer\Exception\UnexpectedValueException;
@@ -63,18 +63,19 @@ class Serializer implements SerializerInterface
     public function decode(array $encodedEnvelope): Envelope
     {
         if (empty($encodedEnvelope['body']) || empty($encodedEnvelope['headers'])) {
-            throw new InvalidArgumentException('Encoded envelope should have at least a "body" and some "headers".');
+            throw new MessageDecodingFailedException('Encoded envelope should have at least a "body" and some "headers".');
         }
 
         if (empty($encodedEnvelope['headers']['type'])) {
-            throw new InvalidArgumentException('Encoded envelope does not have a "type" header.');
+            throw new MessageDecodingFailedException('Encoded envelope does not have a "type" header.');
         }
 
         $stamps = $this->decodeStamps($encodedEnvelope);
+        $serializerStamp = $this->findFirstSerializerStamp($stamps);
 
         $context = $this->context;
-        if (isset($stamps[SerializerStamp::class])) {
-            $context = end($stamps[SerializerStamp::class])->getContext() + $context;
+        if (null !== $serializerStamp) {
+            $context = $serializerStamp->getContext() + $context;
         }
 
         try {
@@ -83,7 +84,7 @@ class Serializer implements SerializerInterface
             throw new MessageDecodingFailedException(sprintf('Could not decode message: %s.', $e->getMessage()), $e->getCode(), $e);
         }
 
-        return new Envelope($message, ...$stamps);
+        return new Envelope($message, $stamps);
     }
 
     /**
@@ -138,5 +139,19 @@ class Serializer implements SerializerInterface
         }
 
         return $headers;
+    }
+
+    /**
+     * @param StampInterface[] $stamps
+     */
+    private function findFirstSerializerStamp(array $stamps): ?SerializerStamp
+    {
+        foreach ($stamps as $stamp) {
+            if ($stamp instanceof SerializerStamp) {
+                return $stamp;
+            }
+        }
+
+        return null;
     }
 }

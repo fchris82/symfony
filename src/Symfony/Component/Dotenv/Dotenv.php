@@ -34,8 +34,22 @@ final class Dotenv
     private $lineno;
     private $data;
     private $end;
-    private $state;
     private $values;
+    private $usePutenv = true;
+
+    /**
+     * @var bool If `putenv()` should be used to define environment variables or not.
+     *           Beware that `putenv()` is not thread safe and this setting will default
+     *           to `false` in Symfony 5.0.
+     */
+    public function __construct(bool $usePutenv = true)
+    {
+        if (!\func_num_args()) {
+            @trigger_error(sprintf('The default value of "$usePutenv" argument of "%s" will be changed from "true" to "false" in Symfony 5.0. You should define its value explicitly.', __METHOD__), E_USER_DEPRECATED);
+        }
+
+        $this->usePutenv = $usePutenv;
+    }
 
     /**
      * Loads one or several .env files.
@@ -127,7 +141,10 @@ final class Dotenv
                 continue;
             }
 
-            putenv("$name=$value");
+            if ($this->usePutenv) {
+                putenv("$name=$value");
+            }
+
             $_ENV[$name] = $value;
             if ($notHttpName) {
                 $_SERVER[$name] = $value;
@@ -141,7 +158,11 @@ final class Dotenv
         if ($updateLoadedVars) {
             unset($loadedVars['']);
             $loadedVars = implode(',', array_keys($loadedVars));
-            putenv('SYMFONY_DOTENV_VARS='.$_ENV['SYMFONY_DOTENV_VARS'] = $_SERVER['SYMFONY_DOTENV_VARS'] = $loadedVars);
+            $_ENV['SYMFONY_DOTENV_VARS'] = $_SERVER['SYMFONY_DOTENV_VARS'] = $loadedVars;
+
+            if ($this->usePutenv) {
+                putenv('SYMFONY_DOTENV_VARS='.$loadedVars);
+            }
         }
     }
 
@@ -162,27 +183,27 @@ final class Dotenv
         $this->lineno = 1;
         $this->cursor = 0;
         $this->end = \strlen($this->data);
-        $this->state = self::STATE_VARNAME;
+        $state = self::STATE_VARNAME;
         $this->values = [];
         $name = '';
 
         $this->skipEmptyLines();
 
         while ($this->cursor < $this->end) {
-            switch ($this->state) {
+            switch ($state) {
                 case self::STATE_VARNAME:
                     $name = $this->lexVarname();
-                    $this->state = self::STATE_VALUE;
+                    $state = self::STATE_VALUE;
                     break;
 
                 case self::STATE_VALUE:
                     $this->values[$name] = $this->lexValue();
-                    $this->state = self::STATE_VARNAME;
+                    $state = self::STATE_VARNAME;
                     break;
             }
         }
 
-        if (self::STATE_VALUE === $this->state) {
+        if (self::STATE_VALUE === $state) {
             $this->values[$name] = '';
         }
 

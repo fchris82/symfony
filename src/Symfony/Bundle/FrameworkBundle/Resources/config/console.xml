@@ -48,6 +48,11 @@
             <tag name="console.command" command="cache:pool:delete" />
         </service>
 
+        <service id="console.command.cache_pool_list" class="Symfony\Bundle\FrameworkBundle\Command\CachePoolListCommand">
+            <argument /> <!-- Pool names -->
+            <tag name="console.command" command="cache:pool:list" />
+        </service>
+
         <service id="console.command.cache_warmup" class="Symfony\Bundle\FrameworkBundle\Command\CacheWarmupCommand">
             <argument type="service" id="cache_warmer" />
             <tag name="console.command" command="cache:warmup" />
@@ -83,10 +88,20 @@
             <argument type="collection" /> <!-- Receiver names -->
             <argument type="service" id="messenger.retry_strategy_locator" />
             <argument type="service" id="event_dispatcher" />
+            <call method="setCachePoolForRestartSignal">
+                <argument type="service" id="cache.messenger.restart_workers_signal" />
+            </call>
 
             <tag name="console.command" command="messenger:consume" />
             <tag name="console.command" command="messenger:consume-messages" />
             <tag name="monolog.logger" channel="messenger" />
+        </service>
+
+        <service id="console.command.messenger_setup_transports" class="Symfony\Component\Messenger\Command\SetupTransportsCommand">
+            <argument type="service" id="messenger.receiver_locator" />
+            <argument type="collection" /> <!-- Receiver names -->
+
+            <tag name="console.command" command="messenger:setup-transports" />
         </service>
 
         <service id="console.command.messenger_debug" class="Symfony\Component\Messenger\Command\DebugCommand">
@@ -94,8 +109,14 @@
             <tag name="console.command" command="debug:messenger" />
         </service>
 
+        <service id="console.command.messenger_stop_workers" class="Symfony\Component\Messenger\Command\StopWorkersCommand">
+            <argument type="service" id="cache.messenger.restart_workers_signal" />
+            <tag name="console.command" command="messenger:stop-workers" />
+        </service>
+
         <service id="console.command.router_debug" class="Symfony\Bundle\FrameworkBundle\Command\RouterDebugCommand">
             <argument type="service" id="router" />
+            <argument type="service" id="debug.file_link_formatter" on-invalid="null" />
             <tag name="console.command" command="debug:router" />
         </service>
 
@@ -145,6 +166,7 @@
             <argument type="collection" /> <!-- All services form types are stored here by FormPass -->
             <argument type="collection" /> <!-- All type extensions are stored here by FormPass -->
             <argument type="collection" /> <!-- All type guessers are stored here by FormPass -->
+            <argument type="service" id="debug.file_link_formatter" on-invalid="null" />
             <tag name="console.command" command="debug:form" />
         </service>
     </services>

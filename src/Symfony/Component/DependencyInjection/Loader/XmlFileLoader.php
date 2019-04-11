@@ -175,9 +175,15 @@ class XmlFileLoader extends FileLoader
         if (null === $defaultsNode = $xpath->query('//container:services/container:defaults')->item(0)) {
             return [];
         }
+
+        $bindings = [];
+        foreach ($this->getArgumentsAsPhp($defaultsNode, 'bind', $file) as $argument => $value) {
+            $bindings[$argument] = new BoundArgument($value, true, BoundArgument::DEFAULTS_BINDING, $file);
+        }
+
         $defaults = [
             'tags' => $this->getChildren($defaultsNode, 'tag'),
-            'bind' => array_map(function ($v) { return new BoundArgument($v); }, $this->getArgumentsAsPhp($defaultsNode, 'bind', $file)),
+            'bind' => $bindings,
         ];
 
         foreach ($defaults['tags'] as $tag) {
@@ -317,7 +323,7 @@ class XmlFileLoader extends FileLoader
                     $class = $factory->hasAttribute('class') ? $factory->getAttribute('class') : null;
                 }
 
-                $definition->setFactory([$class, $factory->getAttribute('method')]);
+                $definition->setFactory([$class, $factory->getAttribute('method') ?: '__invoke']);
             }
         }
 
@@ -332,12 +338,12 @@ class XmlFileLoader extends FileLoader
                     $class = $configurator->getAttribute('class');
                 }
 
-                $definition->setConfigurator([$class, $configurator->getAttribute('method')]);
+                $definition->setConfigurator([$class, $configurator->getAttribute('method') ?: '__invoke']);
             }
         }
 
         foreach ($this->getChildren($service, 'call') as $call) {
-            $definition->addMethodCall($call->getAttribute('method'), $this->getArgumentsAsPhp($call, 'argument', $file));
+            $definition->addMethodCall($call->getAttribute('method'), $this->getArgumentsAsPhp($call, 'argument', $file), XmlUtils::phpize($call->getAttribute('returns-clone')));
         }
 
         $tags = $this->getChildren($service, 'tag');
@@ -368,6 +374,11 @@ class XmlFileLoader extends FileLoader
         }
 
         $bindings = $this->getArgumentsAsPhp($service, 'bind', $file);
+        $bindingType = $this->isLoadingInstanceof ? BoundArgument::INSTANCEOF_BINDING : BoundArgument::SERVICE_BINDING;
+        foreach ($bindings as $argument => $value) {
+            $bindings[$argument] = new BoundArgument($value, true, $bindingType, $file);
+        }
+
         if (isset($defaults['bind'])) {
             // deep clone, to avoid multiple process of the same instance in the passes
             $bindings = array_merge(unserialize(serialize($defaults['bind'])), $bindings);

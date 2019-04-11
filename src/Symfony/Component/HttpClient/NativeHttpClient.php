@@ -11,6 +11,8 @@
 
 namespace Symfony\Component\HttpClient;
 
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\Response\NativeResponse;
 use Symfony\Component\HttpClient\Response\ResponseStream;
@@ -28,9 +30,10 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
  *
  * @experimental in 4.3
  */
-final class NativeHttpClient implements HttpClientInterface
+final class NativeHttpClient implements HttpClientInterface, LoggerAwareInterface
 {
     use HttpClientTrait;
+    use LoggerAwareTrait;
 
     private $defaultOptions = self::OPTIONS_DEFAULTS;
     private $multi;
@@ -77,12 +80,12 @@ final class NativeHttpClient implements HttpClientInterface
         $options['body'] = self::getBodyAsString($options['body']);
 
         if ('' !== $options['body'] && 'POST' === $method && !isset($options['headers']['content-type'])) {
-            $options['raw_headers'][] = 'content-type: application/x-www-form-urlencoded';
+            $options['request_headers'][] = 'content-type: application/x-www-form-urlencoded';
         }
 
         if ($gzipEnabled = \extension_loaded('zlib') && !isset($options['headers']['accept-encoding'])) {
             // gzip is the most widely available algo, no need to deal with deflate
-            $options['raw_headers'][] = 'accept-encoding: gzip';
+            $options['request_headers'][] = 'accept-encoding: gzip';
         }
 
         if ($options['peer_fingerprint']) {
@@ -94,7 +97,7 @@ final class NativeHttpClient implements HttpClientInterface
         }
 
         $info = [
-            'raw_headers' => [],
+            'response_headers' => [],
             'url' => $url,
             'error' => null,
             'http_method' => $method,
@@ -156,10 +159,12 @@ final class NativeHttpClient implements HttpClientInterface
             $this->multi->dnsCache = $options['resolve'] + $this->multi->dnsCache;
         }
 
+        $this->logger && $this->logger->info(sprintf('Request: %s %s', $method, implode('', $url)));
+
         [$host, $port, $url['authority']] = self::dnsResolve($url, $this->multi, $info, $onProgress);
 
         if (!isset($options['headers']['host'])) {
-            $options['raw_headers'][] = 'host: '.$host.$port;
+            $options['request_headers'][] = 'host: '.$host.$port;
         }
 
         $context = [
@@ -198,14 +203,14 @@ final class NativeHttpClient implements HttpClientInterface
         ];
 
         $proxy = self::getProxy($options['proxy'], $url);
-        $noProxy = $noProxy ?? $_SERVER['no_proxy'] ?? $_SERVER['NO_PROXY'] ?? '';
+        $noProxy = $_SERVER['no_proxy'] ?? $_SERVER['NO_PROXY'] ?? '';
         $noProxy = $noProxy ? preg_split('/[\s,]+/', $noProxy) : [];
 
         $resolveRedirect = self::createRedirectResolver($options, $host, $proxy, $noProxy, $info, $onProgress);
         $context = stream_context_create($context, ['notification' => $notification]);
-        self::configureHeadersAndProxy($context, $host, $options['raw_headers'], $proxy, $noProxy);
+        self::configureHeadersAndProxy($context, $host, $options['request_headers'], $proxy, $noProxy);
 
-        return new NativeResponse($this->multi, $context, implode('', $url), $options, $gzipEnabled, $info, $resolveRedirect, $onProgress);
+        return new NativeResponse($this->multi, $context, implode('', $url), $options, $gzipEnabled, $info, $resolveRedirect, $onProgress, $this->logger);
     }
 
     /**
@@ -252,7 +257,7 @@ final class NativeHttpClient implements HttpClientInterface
     {
         if (null === $proxy) {
             // Ignore HTTP_PROXY except on the CLI to work around httpoxy set of vulnerabilities
-            $proxy = $_SERVER['http_proxy'] ?? ('cli' === \PHP_SAPI ? $_SERVER['HTTP_PROXY'] ?? null : null) ?? $_SERVER['all_proxy'] ?? $_SERVER['ALL_PROXY'] ?? null;
+            $proxy = $_SERVER['http_proxy'] ?? (\in_array(\PHP_SAPI, ['cli', 'phpdbg'], true) ? $_SERVER['HTTP_PROXY'] ?? null : null) ?? $_SERVER['all_proxy'] ?? $_SERVER['ALL_PROXY'] ?? null;
 
             if ('https:' === $url['scheme']) {
                 $proxy = $_SERVER['https_proxy'] ?? $_SERVER['HTTPS_PROXY'] ?? $proxy;
@@ -326,12 +331,12 @@ final class NativeHttpClient implements HttpClientInterface
         $redirectHeaders = [];
         if (0 < $maxRedirects = $options['max_redirects']) {
             $redirectHeaders = ['host' => $host];
-            $redirectHeaders['with_auth'] = $redirectHeaders['no_auth'] = array_filter($options['raw_headers'], static function ($h) {
+            $redirectHeaders['with_auth'] = $redirectHeaders['no_auth'] = array_filter($options['request_headers'], static function ($h) {
                 return 0 !== stripos($h, 'Host:');
             });
 
             if (isset($options['headers']['authorization']) || isset($options['headers']['cookie'])) {
-                $redirectHeaders['no_auth'] = array_filter($options['raw_headers'], static function ($h) {
+                $redirectHeaders['no_auth'] = array_filter($options['request_headers'], static function ($h) {
                     return 0 !== stripos($h, 'Authorization:') && 0 !== stripos($h, 'Cookie:');
                 });
             }
@@ -376,36 +381,28 @@ final class NativeHttpClient implements HttpClientInterface
 
             if (false !== (parse_url($location, PHP_URL_HOST) ?? false)) {
                 // Authorization and Cookie headers MUST NOT follow except for the initial host name
-                $rawHeaders = $redirectHeaders['host'] === $host ? $redirectHeaders['with_auth'] : $redirectHeaders['no_auth'];
-                $rawHeaders[] = 'host: '.$host.$port;
-                self::configureHeadersAndProxy($context, $host, $rawHeaders, $proxy, $noProxy);
+                $requestHeaders = $redirectHeaders['host'] === $host ? $redirectHeaders['with_auth'] : $redirectHeaders['no_auth'];
+                $requestHeaders[] = 'host: '.$host.$port;
+                self::configureHeadersAndProxy($context, $host, $requestHeaders, $proxy, $noProxy);
             }
 
             return implode('', $url);
         };
     }
 
-    private static function configureHeadersAndProxy($context, string $host, array $rawHeaders, ?array $proxy, array $noProxy)
+    private static function configureHeadersAndProxy($context, string $host, array $requestHeaders, ?array $proxy, array $noProxy)
     {
         if (null === $proxy) {
-            return stream_context_set_option($context, 'http', 'header', $rawHeaders);
+            return stream_context_set_option($context, 'http', 'header', $requestHeaders);
         }
 
         // Matching "no_proxy" should follow the behavior of curl
 
         foreach ($noProxy as $rule) {
-            if ('*' === $rule) {
-                return stream_context_set_option($context, 'http', 'header', $rawHeaders);
-            }
+            $dotRule = '.'.ltrim($rule, '.');
 
-            if ($host === $rule) {
-                return stream_context_set_option($context, 'http', 'header', $rawHeaders);
-            }
-
-            $rule = '.'.ltrim($rule, '.');
-
-            if (substr($host, -\strlen($rule)) === $rule) {
-                return stream_context_set_option($context, 'http', 'header', $rawHeaders);
+            if ('*' === $rule || $host === $rule || substr($host, -\strlen($dotRule)) === $dotRule) {
+                return stream_context_set_option($context, 'http', 'header', $requestHeaders);
             }
         }
 
@@ -413,9 +410,9 @@ final class NativeHttpClient implements HttpClientInterface
         stream_context_set_option($context, 'http', 'request_fulluri', true);
 
         if (null !== $proxy['auth']) {
-            $rawHeaders[] = 'Proxy-Authorization: '.$proxy['auth'];
+            $requestHeaders[] = 'Proxy-Authorization: '.$proxy['auth'];
         }
 
-        return stream_context_set_option($context, 'http', 'header', $rawHeaders);
+        return stream_context_set_option($context, 'http', 'header', $requestHeaders);
     }
 }

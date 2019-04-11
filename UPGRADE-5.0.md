@@ -25,6 +25,7 @@ Config
  * The `Processor` class has been made final
  * Removed `FileLoaderLoadException`, use `LoaderLoadException` instead.
  * Using environment variables with `cannotBeEmpty()` if the value is validated with `validate()` will throw an exception.
+ * Removed the `root()` method in `TreeBuilder`, pass the root node information to the constructor instead
 
 Console
 -------
@@ -60,17 +61,26 @@ DoctrineBridge
 
  * Deprecated injecting `ClassMetadataFactory` in `DoctrineExtractor`, an instance of `EntityManagerInterface` should be
    injected instead
+ * Passing an `IdReader` to the `DoctrineChoiceLoader` when the query cannot be optimized with single id field will throw an exception, pass `null` instead
+ * Not passing an `IdReader` to the `DoctrineChoiceLoader` when the query can be optimized with single id field will throw an exception
+
 
 DomCrawler
 ----------
 
  * The `Crawler::children()` method has a new `$selector` argument.
 
+Dotenv
+------
+
+ * First parameter `$usePutenv` of `Dotenv::__construct()` now default to `false`.
+
 EventDispatcher
 ---------------
 
  * The `TraceableEventDispatcherInterface` has been removed.
  * The signature of the `EventDispatcherInterface::dispatch()` method has been updated to `dispatch($event, string $eventName = null)`
+ * The `Event` class has been removed, use `Symfony\Contracts\EventDispatcher\Event` instead
 
 DependencyInjection
 -------------------
@@ -231,6 +241,7 @@ HttpKernel
  * Removed `GetResponseForControllerResultEvent`, use `ViewEvent` instead
  * Removed `GetResponseForExceptionEvent`, use `ExceptionEvent` instead
  * Removed `PostResponseEvent`, use `TerminateEvent` instead
+ * Removed `TranslatorListener` in favor of `LocaleAwareListener`
 
 Messenger
 ---------
@@ -291,7 +302,7 @@ Security
  * The `Firewall::handleRequest()` method has been removed, use `Firewall::callListeners()` instead.
  * `\Serializable` interface has been removed from `AbstractToken` and `AuthenticationException`,
    thus `serialize()` and `unserialize()` aren't available.
-   Use `getState()` and `setState()` instead.
+   Use `__serialize()` and `__unserialize()` instead.
 
    Before:
    ```php
@@ -309,17 +320,21 @@ Security
 
    After:
    ```php
-   protected function getState(): array
+   public function __serialize(): array
    {
-       return [$this->myLocalVar, parent::getState()];
+       return [$this->myLocalVar, parent::__serialize()];
    }
 
-   protected function setState(array $data)
+   public function __unserialize(array $data): void
    {
        [$this->myLocalVar, $parentData] = $data;
-       parent::setState($parentData);
+       parent::__unserialize($parentData);
    }
    ```
+
+ * The `Argon2iPasswordEncoder` class has been removed, use `SodiumPasswordEncoder` instead.
+ * Classes implementing the `TokenInterface` must implement the two new methods
+   `__serialize` and `__unserialize`
 
 SecurityBundle
 --------------
@@ -340,6 +355,7 @@ SecurityBundle
    changed to underscores.
    Before: `my-cookie` deleted the `my_cookie` cookie (with an underscore).
    After: `my-cookie` deletes the `my-cookie` cookie (with a dash).
+ * Configuring encoders using `argon2i` as algorithm is not supported anymore, use `sodium` instead.
 
 Serializer
 ----------
@@ -362,6 +378,13 @@ TwigBundle
  * The default value (`false`) of the `twig.strict_variables` configuration option has been changed to `%kernel.debug%`.
  * The `transchoice` tag and filter have been removed, use the `trans` ones instead with a `%count%` parameter.
  * Removed support for legacy templates directories `src/Resources/views/` and `src/Resources/<BundleName>/views/`, use `templates/` and `templates/bundles/<BundleName>/` instead.
+ 
+TwigBridge
+----------
+
+ * removed the `$requestStack` and `$requestContext` arguments of the 
+   `HttpFoundationExtension`, pass a `Symfony\Component\HttpFoundation\UrlHelper`
+   instance as the only argument instead
 
 Validator
 --------
@@ -386,8 +409,68 @@ Workflow
  * `ClassInstanceSupportStrategy` has been removed, use `InstanceOfSupportStrategy` instead.
  * `MarkingStoreInterface::setMarking()` has a third argument: `array $context = []`.
  * Removed support of `initial_place`. Use `initial_places` instead.
- * `MultipleStateMarkingStore` has been removed.
- * `SingleStateMarkingStore` has been removed.
+ * `MultipleStateMarkingStore` has been removed. Use `MethodMarkingStore` instead.
+
+   Before:
+   ```yaml
+   framework:
+       workflows:
+           type: workflow
+           article:
+               marking_store:
+                   type: multiple
+                   arguments: states
+   ```
+
+   After:
+   ```yaml
+   framework:
+       workflows:
+           type: workflow
+           article:
+               marking_store:
+                   property: states
+   ```
+ * `SingleStateMarkingStore` has been removed. Use `MethodMarkingStore` instead.
+
+   Before:
+   ```yaml
+   framework:
+       workflows:
+           article:
+               marking_store:
+                   arguments: state
+   ```
+
+   After:
+   ```yaml
+   framework:
+       workflows:
+           article:
+               marking_store:
+                   property: state
+   ```
+
+
+ * Support for using a workflow with a single state marking is dropped. Use a state machine instead.
+
+   Before:
+   ```yaml
+   framework:
+       workflows:
+           article:
+               type: workflow
+               marking_store:
+                   type: single_state
+   ```
+
+   After:
+   ```yaml
+   framework:
+       workflows:
+           article:
+               type: state_machine
+   ```
 
 Yaml
 ----

@@ -30,6 +30,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 use Symfony\Component\Security\Core\Encoder\Argon2iPasswordEncoder;
+use Symfony\Component\Security\Core\Encoder\SodiumPasswordEncoder;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 use Symfony\Component\Security\Http\Controller\UserValueResolver;
 use Symfony\Component\Templating\PhpEngine;
@@ -564,6 +565,8 @@ class SecurityExtension extends Extension implements PrependExtensionInterface
 
         // Argon2i encoder
         if ('argon2i' === $config['algorithm']) {
+            @trigger_error('Configuring an encoder with "argon2i" as algorithm is deprecated since Symfony 4.3, use "sodium" instead.', E_USER_DEPRECATED);
+
             if (!Argon2iPasswordEncoder::isSupported()) {
                 if (\extension_loaded('sodium') && !\defined('SODIUM_CRYPTO_PWHASH_SALTBYTES')) {
                     throw new InvalidConfigurationException('The installed libsodium version does not have support for Argon2i. Use Bcrypt instead.');
@@ -579,6 +582,17 @@ class SecurityExtension extends Extension implements PrependExtensionInterface
                     $config['time_cost'],
                     $config['threads'],
                 ],
+            ];
+        }
+
+        if ('sodium' === $config['algorithm']) {
+            if (!SodiumPasswordEncoder::isSupported()) {
+                throw new InvalidConfigurationException('Libsodium is not available. Install the sodium extension or use BCrypt instead.');
+            }
+
+            return [
+                'class' => SodiumPasswordEncoder::class,
+                'arguments' => [],
             ];
         }
 
