@@ -6,8 +6,13 @@ CHANGELOG
 
  * added support for hyperlinks
  * added `ProgressBar::iterate()` method that simplify updating the progress bar when iterating
- * refactored console output formatter
- * added <wrap> and <nowrap> formatter tags to console
+ * refactored console output formatter: add lexer and tokens. Important changes:
+    * added `<wrap>` and `<nowrap>` formatter tags to console
+    * [BC BREAK] earlier the unhandled/unknown tags will be shown, but now every tag will disappear after formatting. If you want to show a "tag", you have to escape it with `\` sign: `\<visibleTag>...\</visibleTag>`. You can use the `\Symfony\Component\Console\Formatter\OutputFormatter::escape()` function as well.
+    * [BC BREAK] `\Symfony\Component\Console\Formatter\OutputFormatterStyleInterface` was changed: `apply()` function was removed, and there were set 2 new methods: `start()`, `close()`
+    * [BC BREAK] `\Symfony\Component\Console\Formatter\OutputFormatter` is no longer instance of `WrappableOutputFormatterInterface`
+    * `\Symfony\Component\Console\Formatter\WrappableOutputFormatterInterface` is deprecated
+
  * added `Question::setAutocompleterCallback()` to provide a callback function
    that dynamically generates suggestions as the user types
 
