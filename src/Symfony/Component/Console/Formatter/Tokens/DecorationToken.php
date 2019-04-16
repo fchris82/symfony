@@ -14,7 +14,7 @@ namespace Symfony\Component\Console\Formatter\Tokens;
 use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
 
 /**
- * Decoration token for any decoration strings. Eg: `\033[32m`
+ * Decoration token for any decoration strings. Eg: `\033[32m`.
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */

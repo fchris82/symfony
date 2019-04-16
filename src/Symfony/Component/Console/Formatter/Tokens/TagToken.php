@@ -14,7 +14,7 @@ namespace Symfony\Component\Console\Formatter\Tokens;
 use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
 
 /**
- * Tag token is a "sub token"/children of the FullTagToken. Structure:
+ * Tag token is a "sub token"/children of the FullTagToken. Structure:.
  *
  *      <tag1=option1,option2:value2>
  *       ^^^^ ^^^^^^^^^^^^^^^^^^^^^^
@@ -77,6 +77,7 @@ class TagToken extends Token
         $parent = $this->getParent();
         $prefix = $parent->isCloseTag() && !$parent->isSelfClosed() ? '/' : '';
         $suffix = $parent->isSelfClosed() ? '/' : '';
+
         return sprintf('%s<%s%s%s>', $this->typeToString(), $prefix, $this->getOriginalStringRepresentation(), $suffix);
     }
 
@@ -113,7 +114,7 @@ class TagToken extends Token
      */
     public static function parse(string $tagString): self
     {
-        if (\strpos($tagString, '=') !== false) {
+        if (false !== \strpos($tagString, '=')) {
             list($name, $value) = explode('=', $tagString, 2);
         } else {
             $name = $tagString;

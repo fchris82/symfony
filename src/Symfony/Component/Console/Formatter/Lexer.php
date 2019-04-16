@@ -13,12 +13,10 @@ namespace Symfony\Component\Console\Formatter;
 
 use Symfony\Component\Console\Exception\FormatterTooLargeInputException;
 use Symfony\Component\Console\Formatter\Tokens\EosToken;
+use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
 use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
-use Symfony\Component\Console\Formatter\Tokens\TokenInterface;
-use Symfony\Component\Console\Formatter\Tokens\TokenWithChildren;
 use Symfony\Component\Console\Formatter\Tokens\WordToken;
-use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Helper\Helper;
 
 /**

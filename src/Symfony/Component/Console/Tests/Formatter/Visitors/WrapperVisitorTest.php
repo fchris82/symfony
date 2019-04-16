@@ -11,10 +11,10 @@
 
 namespace Symfony\Component\Console\Tests\Formatter\Visitors;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
 use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
-use PHPUnit\Framework\TestCase;
 
 class WrapperVisitorTest extends TestCase
 {
@@ -46,11 +46,11 @@ class WrapperVisitorTest extends TestCase
             ['<wrap=2>word</wrap>', "wo\nrd"],
             ['<wrap=2/>word', "wo\nrd"],
             // UTF-8 test
-            ['<wrap=8/>öüóőúéáű', "öüóőúéáű"],
+            ['<wrap=8/>öüóőúéáű', 'öüóőúéáű'],
             ['<wrap=4/>öüóőúéáű', "öüóő\núéáű"],
             ['<wrap=6,fill_up/>öüóőúéáű', "öüóőúé\náű    "],
             ['<wrap=6,fill_up:./>öüóőúéáű', "öüóőúé\náű...."],
-            ['<wrap=6,fill_up,cut_words:0/>öüóőúéáű', "öüóőúéáű"],
+            ['<wrap=6,fill_up,cut_words:0/>öüóőúéáű', 'öüóőúéáű'],
             ['<wrap=6/>öüóő úéáű', "öüóő\núéáű"],
             ['<wrap=6,cut_words/>öüóő úéáű', "öüóő ú\néáű"],
             // Test two different wrapping
@@ -64,7 +64,7 @@ class WrapperVisitorTest extends TestCase
 word2
 [TagToken<tag0/>][TagToken<tag2>]word3[TagToken</tag2>][EosToken()]
 EOS
-                , true
+                , true,
             ],
         ];
     }
@@ -117,7 +117,7 @@ EOS
             [
                 'with_long_words.txt',
                 'with_long_words_with_default_cut.txt',
-                "<wrap=30/>\n"
+                "<wrap=30/>\n",
             ],
             [
                 'with_long_words.txt',
@@ -143,6 +143,6 @@ EOS
     {
         $filePath = __DIR__.'/../../Fixtures/Formatter/WordWrapper/output/'.$fileName;
 
-        return file_get_contents($filePath) . '[EosToken()]';
+        return file_get_contents($filePath).'[EosToken()]';
     }
 }

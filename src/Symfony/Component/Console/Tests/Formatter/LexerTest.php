@@ -29,7 +29,7 @@ class LexerTest extends TestCase
     public function dpTokenize()
     {
         return [
-            ['', "EosToken()"],
+            ['', 'EosToken()'],
             ['0', "WordToken(0)\nEosToken()"],
             ['word', "WordToken(word)\nEosToken()"],
             ['<tag>', "FullTagToken(TagToken<tag>)\nEosToken()"],

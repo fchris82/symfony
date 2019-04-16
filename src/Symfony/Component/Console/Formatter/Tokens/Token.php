@@ -26,7 +26,7 @@ abstract class Token implements TokenInterface
     protected $originalStringRepresentation;
 
     /**
-     * @var null|TokenWithChildren
+     * @var TokenWithChildren|null
      */
     protected $parent;
 
@@ -36,7 +36,7 @@ abstract class Token implements TokenInterface
      * @param string     $originalStringRepresentationRepresentation
      * @param Token|null $parent
      */
-    public function __construct(string $originalStringRepresentationRepresentation, Token $parent = null)
+    public function __construct(string $originalStringRepresentationRepresentation, self $parent = null)
     {
         $this->originalStringRepresentation = $originalStringRepresentationRepresentation;
         $this->parent = $parent;
@@ -49,7 +49,7 @@ abstract class Token implements TokenInterface
 
     public function typeToString(): string
     {
-        $path = explode('\\', get_class($this));
+        $path = explode('\\', \get_class($this));
 
         return array_pop($path);
     }

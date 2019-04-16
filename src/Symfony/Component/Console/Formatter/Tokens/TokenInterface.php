@@ -20,10 +20,11 @@ use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
 interface TokenInterface
 {
     public function getParent(): TokenWithChildren;
+
     public function setParent(TokenWithChildren $token): self;
 
     /**
-     * Accept a Visitor
+     * Accept a Visitor.
      *
      * @param FormatterVisitorInterface $formatterVisitor
      */
@@ -42,21 +43,21 @@ interface TokenInterface
      *
      * @param TokenInterface $token
      */
-    public function replace(TokenInterface $token): void;
+    public function replace(self $token): void;
 
     /**
      * Insert a new token BEFORE THIS into the parent.
      *
      * @param TokenInterface $token
      */
-    public function insertBefore(TokenInterface $token): void;
+    public function insertBefore(self $token): void;
 
     /**
      * Insert a new token AFTER THIS into the parent.
      *
      * @param TokenInterface $token
      */
-    public function insertAfter(TokenInterface $token): void;
+    public function insertAfter(self $token): void;
 
     /**
      * Is this first child? In the parent, not the root!
@@ -80,7 +81,7 @@ interface TokenInterface
      *
      * @throws TokenNotFoundException
      */
-    public function prevSibling(): TokenInterface;
+    public function prevSibling(): self;
 
     /**
      * Get the next sibling if it exists. It throws TokenNotFoundException if sibling doesn't. It doesn't step
@@ -90,7 +91,7 @@ interface TokenInterface
      *
      * @throws TokenNotFoundException
      */
-    public function nextSibling(): TokenInterface;
+    public function nextSibling(): self;
 
     /**
      * Remove this child from the parent.

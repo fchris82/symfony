@@ -14,7 +14,7 @@ namespace Symfony\Component\Console\Formatter\Tokens;
 use Symfony\Component\Console\Exception\TokenNotFoundException;
 
 /**
- * Token stream, token container for collecting ordered tokens (children)
+ * Token stream, token container for collecting ordered tokens (children).
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
@@ -67,7 +67,7 @@ class TokenStream implements TokenStreamInterface
         $this->tokens = array_merge(\array_slice($this->tokens, 0, $position), $tokens, \array_slice($this->tokens, $position));
         // Fix the position
         if ($position <= $this->current) {
-            $this->current += count($tokens);
+            $this->current += \count($tokens);
         }
     }
 
@@ -87,7 +87,7 @@ class TokenStream implements TokenStreamInterface
      */
     public function insertAfterCurrent(TokenInterface $token): void
     {
-        $this->injectTokens([$token], $this->current+1);
+        $this->injectTokens([$token], $this->current + 1);
     }
 
     /**
@@ -96,7 +96,7 @@ class TokenStream implements TokenStreamInterface
     public function insertBeforeCurrent(TokenInterface $token): void
     {
         $this->injectTokens([$token], $this->current);
-        $this->current++;
+        ++$this->current;
     }
 
     /**
@@ -105,7 +105,7 @@ class TokenStream implements TokenStreamInterface
     public function insertAfter(TokenInterface $referenceToken, TokenInterface $newToken): void
     {
         $i = $this->findIndex($referenceToken);
-        $this->insert($newToken, $i+1);
+        $this->insert($newToken, $i + 1);
     }
 
     /**
@@ -140,16 +140,16 @@ class TokenStream implements TokenStreamInterface
         unset($this->tokens[$i]);
         $this->tokens = array_values($this->tokens);
         if ($i <= $this->current) {
-            $this->current--;
+            --$this->current;
         }
     }
 
     /**
-     * Count elements of an object
+     * Count elements of an object.
      *
-     * @link  http://php.net/manual/en/countable.count.php
+     * @see  http://php.net/manual/en/countable.count.php
      *
-     * @return int The custom count as an integer.
+     * @return int the custom count as an integer
      */
     public function count(): int
     {
@@ -157,9 +157,9 @@ class TokenStream implements TokenStreamInterface
     }
 
     /**
-     * Return the current element
+     * Return the current element.
      *
-     * @link  http://php.net/manual/en/iterator.current.php
+     * @see  http://php.net/manual/en/iterator.current.php
      *
      * @return Token
      */
@@ -169,19 +169,19 @@ class TokenStream implements TokenStreamInterface
     }
 
     /**
-     * Move forward to next element
+     * Move forward to next element.
      *
-     * @link  http://php.net/manual/en/iterator.next.php
+     * @see  http://php.net/manual/en/iterator.next.php
      */
     public function next(): void
     {
-        $this->current++;
+        ++$this->current;
     }
 
     /**
-     * Return the key of the current element
+     * Return the key of the current element.
      *
-     * @link  http://php.net/manual/en/iterator.key.php
+     * @see  http://php.net/manual/en/iterator.key.php
      *
      * @return int
      */
@@ -191,21 +191,21 @@ class TokenStream implements TokenStreamInterface
     }
 
     /**
-     * Checks if current position is valid
+     * Checks if current position is valid.
      *
-     * @link  http://php.net/manual/en/iterator.valid.php
+     * @see  http://php.net/manual/en/iterator.valid.php
      *
-     * @return boolean The return value will be casted to boolean and then evaluated.
+     * @return bool the return value will be casted to boolean and then evaluated
      */
     public function valid(): bool
     {
-        return array_key_exists($this->current, $this->tokens);
+        return \array_key_exists($this->current, $this->tokens);
     }
 
     /**
-     * Rewind the Iterator to the first element
+     * Rewind the Iterator to the first element.
      *
-     * @link  http://php.net/manual/en/iterator.rewind.php
+     * @see  http://php.net/manual/en/iterator.rewind.php
      */
     public function rewind(): void
     {
@@ -221,7 +221,7 @@ class TokenStream implements TokenStreamInterface
      */
     public function has(int $position): bool
     {
-        return array_key_exists($position, $this->tokens);
+        return \array_key_exists($position, $this->tokens);
     }
 
     /**
@@ -297,7 +297,7 @@ class TokenStream implements TokenStreamInterface
     {
         unset($this->tokens[$this->current]);
         $this->tokens = array_values($this->tokens);
-        $this->current--;
+        --$this->current;
     }
 
     /**
@@ -305,7 +305,7 @@ class TokenStream implements TokenStreamInterface
      */
     public function prev(): void
     {
-        $this->current--;
+        --$this->current;
     }
 
     /**
@@ -321,7 +321,7 @@ class TokenStream implements TokenStreamInterface
      */
     public function isLast(TokenInterface $token): bool
     {
-        return spl_object_hash($this->tokens[$this->count()-1]) === spl_object_hash($token);
+        return spl_object_hash($this->tokens[$this->count() - 1]) === spl_object_hash($token);
     }
 
     /**
@@ -330,7 +330,8 @@ class TokenStream implements TokenStreamInterface
     public function getPrev(TokenInterface $token): TokenInterface
     {
         $index = $this->findIndex($token);
-        return $this->get($index-1);
+
+        return $this->get($index - 1);
     }
 
     /**
@@ -339,6 +340,7 @@ class TokenStream implements TokenStreamInterface
     public function getNext(TokenInterface $token): TokenInterface
     {
         $index = $this->findIndex($token);
-        return $this->get($index+1);
+
+        return $this->get($index + 1);
     }
 }

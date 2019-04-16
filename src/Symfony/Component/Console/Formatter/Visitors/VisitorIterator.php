@@ -45,7 +45,7 @@ class VisitorIterator implements \Iterator, \Countable
      */
     public function insert(FormatterVisitorInterface $value, int $priority = 0): void
     {
-        if (!array_key_exists($priority, $this->visitorsByPriority)) {
+        if (!\array_key_exists($priority, $this->visitorsByPriority)) {
             $this->visitorsByPriority[$priority] = [];
         }
 
@@ -65,9 +65,9 @@ class VisitorIterator implements \Iterator, \Countable
     }
 
     /**
-     * Return the current element
+     * Return the current element.
      *
-     * @link  http://php.net/manual/en/iterator.current.php
+     * @see  http://php.net/manual/en/iterator.current.php
      *
      * @return FormatterVisitorInterface
      */
@@ -77,21 +77,19 @@ class VisitorIterator implements \Iterator, \Countable
     }
 
     /**
-     * Move forward to next element
+     * Move forward to next element.
      *
-     * @link  http://php.net/manual/en/iterator.next.php
-     *
-     * @return void Any returned value is ignored.
+     * @see  http://php.net/manual/en/iterator.next.php
      */
     public function next(): void
     {
-        $this->current++;
+        ++$this->current;
     }
 
     /**
-     * Return the key of the current element
+     * Return the key of the current element.
      *
-     * @link  http://php.net/manual/en/iterator.key.php
+     * @see  http://php.net/manual/en/iterator.key.php
      *
      * @return int
      */
@@ -101,22 +99,24 @@ class VisitorIterator implements \Iterator, \Countable
     }
 
     /**
-     * Checks if current position is valid
+     * Checks if current position is valid.
      *
-     * @link  http://php.net/manual/en/iterator.valid.php
-     * @return boolean The return value will be casted to boolean and then evaluated.
-     * Returns true on success or false on failure.
+     * @see  http://php.net/manual/en/iterator.valid.php
+     *
+     * @return bool The return value will be casted to boolean and then evaluated.
+     *              Returns true on success or false on failure.
+     *
      * @since 5.0.0
      */
     public function valid()
     {
-        return array_key_exists($this->current, $this->sortedVisitorsCache);
+        return \array_key_exists($this->current, $this->sortedVisitorsCache);
     }
 
     /**
-     * Rewind the Iterator to the first element
+     * Rewind the Iterator to the first element.
      *
-     * @link  http://php.net/manual/en/iterator.rewind.php
+     * @see  http://php.net/manual/en/iterator.rewind.php
      */
     public function rewind(): void
     {
@@ -124,11 +124,11 @@ class VisitorIterator implements \Iterator, \Countable
     }
 
     /**
-     * Count elements of an object
+     * Count elements of an object.
      *
-     * @link  http://php.net/manual/en/countable.count.php
+     * @see  http://php.net/manual/en/countable.count.php
      *
-     * @return int The custom count as an integer.
+     * @return int the custom count as an integer
      */
     public function count(): int
     {

@@ -18,7 +18,7 @@ use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
  * expression. Eg:
  *  - space: ' '
  *  - tab: "\t"
- *  - new line or carriage return: "\n", "\r"
+ *  - new line or carriage return: "\n", "\r".
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
@@ -37,7 +37,7 @@ class SeparatorToken extends Token
      */
     public function isEmpty(): bool
     {
-        if (in_array($this->originalStringRepresentation, [' '])) {
+        if (\in_array($this->originalStringRepresentation, [' '])) {
             return true;
         }
 

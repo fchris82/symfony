@@ -11,9 +11,9 @@
 
 namespace Symfony\Component\Console\Formatter\Visitors;
 
-use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Formatter\Tokens\DecorationToken;
 use Symfony\Component\Console\Formatter\Tokens\EosToken;
+use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
 use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
 use Symfony\Component\Console\Formatter\Tokens\TagToken;
@@ -22,7 +22,7 @@ use Symfony\Component\Console\Formatter\Tokens\TokenInterface;
 use Symfony\Component\Console\Formatter\Tokens\WordToken;
 
 /**
- * Wrapping the text. Eg:
+ * Wrapping the text. Eg:.
  *
  *      <wrap=50,cut_words:30,cut_urls,fill_up:. />Lorem ipsum dolor sit amet
  *                                             ^^
@@ -83,7 +83,7 @@ class WrapperVisitor extends AbstractVisitor
                 $this->newLineReset();
                 break;
             default:
-                $this->cursor+=$separatorToken->getLength();
+                $this->cursor += $separatorToken->getLength();
         }
     }
 
@@ -131,7 +131,7 @@ class WrapperVisitor extends AbstractVisitor
     }
 
     /**
-     * It decides that the word needs to cut (eg. longer than 1 line)
+     * It decides that the word needs to cut (eg. longer than 1 line).
      *
      * @param WordToken $token
      *
@@ -144,11 +144,12 @@ class WrapperVisitor extends AbstractVisitor
         }
 
         $cutLength = $this->activeStyle->getWordCutLimit();
+
         return $cutLength && $token->getLength() > $cutLength;
     }
 
     /**
-     * Check the token is an URL
+     * Check the token is an URL.
      *
      * @param WordToken $token
      *
@@ -166,8 +167,8 @@ class WrapperVisitor extends AbstractVisitor
         // If it is a simple close tag: </tag>, we close and delete the superfluous global configuration from the stack.
         if ($fullTagToken->isCloseTag() && !$fullTagToken->isSelfClosed()) {
             $depth = \count($this->tagStack);
-            if (array_key_exists($depth+1, $this->globalStyleStack)) {
-                unset($this->globalStyleStack[$depth-1]);
+            if (\array_key_exists($depth + 1, $this->globalStyleStack)) {
+                unset($this->globalStyleStack[$depth - 1]);
             }
             $this->resetActiveStyle();
         }
@@ -175,13 +176,13 @@ class WrapperVisitor extends AbstractVisitor
 
     public function visitTag(TagToken $tagToken): void
     {
-        if (in_array($tagToken->getName(), ['wrap', 'nowrap'])) {
+        if (\in_array($tagToken->getName(), ['wrap', 'nowrap'])) {
             if ($tagToken->getParent()->isStartTag()) {
                 $style = $this->parseStyle($tagToken);
                 $this->pushStyle($style, $tagToken->getParent()->isSelfClosed());
             } elseif ($tagToken->getParent()->isCloseTag() && !$tagToken->getParent()->isSelfClosed()) {
                 $depth = \count($this->tagStack);
-                if (array_key_exists($depth, $this->localStyleStack)) {
+                if (\array_key_exists($depth, $this->localStyleStack)) {
                     unset($this->localStyleStack[$depth]);
                     $this->resetActiveStyle();
                 }
@@ -264,7 +265,7 @@ class WrapperVisitor extends AbstractVisitor
      * There are 2 different configuration stacks:
      *      - local means it has begin and end: "<wrap=120>...</wrap>"
      *      - global means it doesn't have end: "<wrap=120/>"
-     * You can combine them:
+     * You can combine them:.
      *
      *      <wrap=120/>.....<wrap=80>....</wrap>...
      *                  ^^^           ^^        ^^^
@@ -325,7 +326,7 @@ class WrapperVisitor extends AbstractVisitor
     {
         $style = new WrapperStyle();
 
-        if ($wrapToken && $wrapToken->getName() != 'nowrap') {
+        if ($wrapToken && 'nowrap' != $wrapToken->getName()) {
             foreach ($wrapToken->getValues() as $value) {
                 if (false !== strpos($value, ':')) {
                     list($attrName, $attrValue) = explode(':', $value);
@@ -378,7 +379,7 @@ class WrapperVisitor extends AbstractVisitor
     {
         $depth = \count($this->tagStack);
         if ($isGlobal) {
-            $this->globalStyleStack[$depth-1] = $style;
+            $this->globalStyleStack[$depth - 1] = $style;
         } else {
             $this->localStyleStack[$depth] = $style;
         }
@@ -398,7 +399,7 @@ class WrapperVisitor extends AbstractVisitor
                 $patternLength = \mb_strlen($this->activeStyle->getFillUpString());
                 $fillUpChars = \mb_substr(str_repeat(
                     $this->activeStyle->getFillUpString(),
-                    ceil($missingChars/$patternLength)
+                    ceil($missingChars / $patternLength)
                 ), -$missingChars);
                 $newLineBorderToken->insertBefore(new DecorationToken($fillUpChars));
             }

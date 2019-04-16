@@ -45,6 +45,7 @@ class WordWrapperHelperTest extends TestCase
     public function dpWordwrap()
     {
         $fillUpStyle = WrapperStyle::create()->setFillUpString(' ');
+
         return [
             // Check empty
             ['', 2, ''],

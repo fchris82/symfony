@@ -11,9 +11,9 @@
 
 namespace Symfony\Component\Console\Tests\Formatter\Visitors;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\Visitors\HrefVisitor;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
 
 class HrefVisitorTest extends TestCase
@@ -51,7 +51,7 @@ class HrefVisitorTest extends TestCase
         return [
             ['', ''],
             ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL</> no URL', "\e]8;;idea://open/?file=/path/SomeFile.php&line=12\e\\some URL\e]8;;\e\\ no URL"],
-            ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL</> no URL', "some URL no URL", 'JetBrains-JediTerm'],
+            ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL</> no URL', 'some URL no URL', 'JetBrains-JediTerm'],
             ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL</href> no URL', "\e]8;;idea://open/?file=/path/SomeFile.php&line=12\e\\some URL\e]8;;\e\\ no URL"],
             // Unclosed
             ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL', "\e]8;;idea://open/?file=/path/SomeFile.php&line=12\e\\some URL\e]8;;\e\\"],

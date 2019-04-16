@@ -24,7 +24,7 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
     protected $children;
 
     /**
-     * TokenWithChildren constructor. In most of case the parent will set later (if it exists)
+     * TokenWithChildren constructor. In most of case the parent will set later (if it exists).
      *
      * @param string     $originalStringRepresentationRepresentation
      * @param Token|null $parent
@@ -36,9 +36,9 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
     }
 
     /**
-     * Retrieve a TokenStreamInterface object
+     * Retrieve a TokenStreamInterface object.
      *
-     * @link  http://php.net/manual/en/iteratoraggregate.getiterator.php
+     * @see  http://php.net/manual/en/iteratoraggregate.getiterator.php
      *
      * @return \Traversable|TokenStreamInterface An instance of an object implementing <b>Iterator</b> or
      *                                           <b>Traversable</b>
@@ -79,7 +79,7 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
     }
 
     /**
-     * Remove all children
+     * Remove all children.
      */
     public function clean(): void
     {
@@ -108,6 +108,7 @@ abstract class TokenWithChildren extends Token implements \IteratorAggregate
         foreach ($this->children as $child) {
             $children[] = (string) $child;
         }
+
         return sprintf("%s(\n%s\n)", $this->typeToString(), implode("\n", $children));
     }
 }

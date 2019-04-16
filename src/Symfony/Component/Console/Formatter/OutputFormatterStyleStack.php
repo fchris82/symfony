@@ -55,7 +55,7 @@ class OutputFormatterStyleStack implements ResetInterface
     /**
      * Pops a style from the stack.
      *
-     * @param int                                $depth
+     * @param int $depth
      *
      * @return OutputFormatterStyleInterface|null
      */
@@ -67,11 +67,13 @@ class OutputFormatterStyleStack implements ResetInterface
 
         if (null === $depth) {
             $stackedStyle = array_pop($this->styles);
+
             return $stackedStyle;
-        } elseif (array_key_exists($depth, $this->styles)) {
+        } elseif (\array_key_exists($depth, $this->styles)) {
             $stackedStyle = $this->styles[$depth];
             $length = array_search($depth, array_keys($this->styles));
             $this->styles = \array_slice($this->styles, 0, $length);
+
             return $stackedStyle;
         }
 
@@ -81,7 +83,7 @@ class OutputFormatterStyleStack implements ResetInterface
     public function popByStyle(OutputFormatterStyleInterface $style)
     {
         /**
-         * @var int $index
+         * @var int
          * @var OutputFormatterStyleInterface $stackedStyle
          */
         foreach (array_reverse($this->styles) as $index => $stackedStyle) {

@@ -11,9 +11,9 @@
 
 namespace Symfony\Component\Console\Formatter\Visitors;
 
-use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Formatter\Tokens\DecorationToken;
 use Symfony\Component\Console\Formatter\Tokens\EosToken;
+use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
 use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
 use Symfony\Component\Console\Formatter\Tokens\TagToken;
@@ -105,13 +105,14 @@ class PrintVisitor extends AbstractVisitor implements OutputBuildVisitorInterfac
                         $this->output .= '\\';
                     }
                     // There isn't break here, it is correct!
+                    // no break
                 case self::PRINT_RAW:
                     $this->output .= $token->getOriginalStringRepresentation();
                     break;
                 case self::PRINT_DEBUG:
                     $this->output .= $token->getLength()
                         ? $token->getOriginalStringRepresentation()
-                        : '[' . (string)$token . ']';
+                        : '['.(string) $token.']';
                     break;
             }
         }
@@ -119,7 +120,7 @@ class PrintVisitor extends AbstractVisitor implements OutputBuildVisitorInterfac
 
     protected function tokenNeedsHandleChildren(Token $token)
     {
-        if (in_array($this->mode, [self::PRINT_RAW, self::PRINT_RAW_ESCAPED]) && $token instanceof FullTagToken) {
+        if (\in_array($this->mode, [self::PRINT_RAW, self::PRINT_RAW_ESCAPED]) && $token instanceof FullTagToken) {
             return false;
         }
 

@@ -16,7 +16,7 @@ use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
 use Symfony\Component\Console\Formatter\Tokens\TagToken;
 
 /**
- * Base visitor
+ * Base visitor.
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
@@ -32,7 +32,7 @@ abstract class AbstractVisitor implements FormatterVisitorInterface
     {
         $this->tagStack = [];
         $iterator = $fullTextToken->getIterator();
-        for ($iterator->rewind();$iterator->valid();$iterator->next()) {
+        for ($iterator->rewind(); $iterator->valid(); $iterator->next()) {
             $iterator->current()->accept($this);
         }
     }
@@ -48,7 +48,7 @@ abstract class AbstractVisitor implements FormatterVisitorInterface
         }
         if ($fullTagToken->isCloseTag()) {
             $lastOpenTag = end($this->tagStack);
-            if ($fullTagToken->getIterator()->count() == 0) {
+            if (0 == $fullTagToken->getIterator()->count()) {
                 foreach ($lastOpenTag->getIterator() as $item) {
                     $fullTagToken->push(clone $item);
                 }

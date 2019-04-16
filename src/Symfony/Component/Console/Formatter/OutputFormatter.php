@@ -96,7 +96,7 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
 
     protected function initVisitors(array $styles)
     {
-        if ($this->visitorIterator->count() === 0) {
+        if (0 === $this->visitorIterator->count()) {
             $this->addVisitor(new WrapperVisitor(), 999);
             $this->addVisitor(new StyleVisitor($styles));
             $this->addVisitor(new HrefVisitor());
@@ -148,6 +148,7 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
     {
         /** @var StyleVisitor $styleVisitor */
         $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
+
         return $styleVisitor->hasStyle($name);
     }
 
@@ -158,6 +159,7 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
     {
         /** @var StyleVisitor $styleVisitor */
         $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
+
         return $styleVisitor->getStyle($name);
     }
 

@@ -12,19 +12,19 @@
 namespace Symfony\Component\Console\Formatter\Visitors;
 
 /**
- * Wrapping style
+ * Wrapping style.
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
 class WrapperStyle implements WrapperStyleInterface
 {
-    /** @var null|int */
+    /** @var int|null */
     protected $width;
-    /** @var null|int */
+    /** @var int|null */
     protected $wordCutLimit;
     /** @var bool */
     protected $cutUrls = false;
-    /** @var null|string */
+    /** @var string|null */
     protected $fillUpString;
 
     /**
@@ -96,7 +96,7 @@ class WrapperStyle implements WrapperStyleInterface
     }
 
     /**
-     * @return null|string
+     * @return string|null
      */
     public function getFillUpString(): ?string
     {
@@ -104,7 +104,7 @@ class WrapperStyle implements WrapperStyleInterface
     }
 
     /**
-     * @param null|string $fillUpString
+     * @param string|null $fillUpString
      *
      * @return $this
      */

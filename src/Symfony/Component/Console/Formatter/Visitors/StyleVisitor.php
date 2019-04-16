@@ -165,13 +165,13 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
                     $this->getCurrentStyle()->setOptions($tagToken->getValues());
                     break;
                 default:
-                    if (array_key_exists($tagToken->getName(), $this->styles)) {
+                    if (\array_key_exists($tagToken->getName(), $this->styles)) {
                         $this->currentStyle = $this->styles[$tagToken->getName()];
                     }
                     break;
             }
         } else {
-            if (array_key_exists($tagToken->getName(), $this->styles)) {
+            if (\array_key_exists($tagToken->getName(), $this->styles)) {
                 $style = $this->styles[$tagToken->getName()];
                 $this->styleStack->popByStyle($style);
                 $tagToken->getParent()->insertBefore(new DecorationToken($style->close()));

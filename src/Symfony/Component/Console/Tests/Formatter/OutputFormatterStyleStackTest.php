@@ -42,7 +42,7 @@ class OutputFormatterStyleStackTest extends TestCase
         $stack->push(1, $s1 = new OutputFormatterStyle('white', 'black'));
         $stack->push(2, $s2 = new OutputFormatterStyle('yellow', 'blue'));
 
-        $this->assertEquals(null, $stack->pop(3));
+        $this->assertNull($stack->pop(3));
         $this->assertEquals($s1, $stack->pop(1));
     }
 

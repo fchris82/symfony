@@ -14,7 +14,7 @@ namespace Symfony\Component\Console\Formatter\Tokens;
 use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
 
 /**
- * Full tag:
+ * Full tag:.
  *
  *      <tag1=option1,option2:value2;tag2=option3>
  *       ^^^^^^^^^^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^
@@ -82,7 +82,7 @@ class FullTagToken extends TokenWithChildren
     /**
      * It gets true if the tag is a start tag:
      *  - Base: <tag1>
-     *  - Self closed: <tag2/>
+     *  - Self closed: <tag2/>.
      *
      * @return bool
      */
@@ -95,7 +95,7 @@ class FullTagToken extends TokenWithChildren
      * It gets true if the tag is a close tag:
      *  - Base: </tag1>
      *  - Short: </>
-     *  - Self closed: <tag2/>
+     *  - Self closed: <tag2/>.
      *
      * @return bool
      */
@@ -106,7 +106,7 @@ class FullTagToken extends TokenWithChildren
 
     /**
      * It gets true if the tag is self closed:
-     *  - Self closed: <tag1/>
+     *  - Self closed: <tag1/>.
      *
      * @return bool
      */
@@ -131,6 +131,7 @@ class FullTagToken extends TokenWithChildren
         foreach ($this->children as $child) {
             $children[] = (string) $child;
         }
+
         return sprintf('%s(%s)', $this->typeToString(), implode('+', $children));
     }
 }

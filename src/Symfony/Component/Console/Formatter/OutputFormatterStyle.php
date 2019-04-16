@@ -179,7 +179,7 @@ class OutputFormatterStyle implements OutputFormatterStyleInterface
      */
     public function apply($text)
     {
-        return sprintf("%s%s%s", $this->start(), $text, $this->close());
+        return sprintf('%s%s%s', $this->start(), $text, $this->close());
     }
 
     public function start(): string

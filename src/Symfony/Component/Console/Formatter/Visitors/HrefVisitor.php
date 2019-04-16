@@ -11,7 +11,6 @@
 
 namespace Symfony\Component\Console\Formatter\Visitors;
 
-use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Formatter\Tokens\DecorationToken;
 use Symfony\Component\Console\Formatter\Tokens\EosToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
@@ -39,7 +38,7 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
 
     protected function handlesHrefGracefully()
     {
-        return !in_array(getenv('TERMINAL_EMULATOR'), ['JetBrains-JediTerm']);
+        return !\in_array(getenv('TERMINAL_EMULATOR'), ['JetBrains-JediTerm']);
     }
 
     public function visitSeparator(SeparatorToken $separatorToken): void
@@ -57,7 +56,7 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         if ('href' == $tagToken->getName()) {
             if ($tagToken->getParent()->isStartTag()) {
                 $tagToken->getParent()->insertAfter(new DecorationToken(sprintf(
-                    "%s%s%s",
+                    '%s%s%s',
                     self::START,
                     implode(',', $tagToken->getValues()),
                     self::CLOSE

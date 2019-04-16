@@ -12,7 +12,6 @@
 namespace Symfony\Component\Console\Formatter\Tokens;
 
 use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
-use Traversable;
 
 /**
  * EOS is an abbreviation: End Of String. It is used for mark the end of full text.

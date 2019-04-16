@@ -16,7 +16,7 @@ namespace Symfony\Component\Console\Formatter;
  *
  * @author Roland Franssen <franssen.roland@gmail.com>
  *
- * @deprecated Use the <wrap=XXX> formation tag instead of this.
+ * @deprecated use the <wrap=XXX> formation tag instead of this
  */
 interface WrappableOutputFormatterInterface extends OutputFormatterInterface
 {
@@ -28,8 +28,8 @@ interface WrappableOutputFormatterInterface extends OutputFormatterInterface
     /**
      * Separate word wrapping method.
      *
-     * @param string   $message
-     * @param int      $width
+     * @param string $message
+     * @param int    $width
      *
      * @return string
      */

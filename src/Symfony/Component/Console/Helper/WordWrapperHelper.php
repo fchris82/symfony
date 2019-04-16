@@ -9,6 +9,7 @@
  */
 
 namespace Symfony\Component\Console\Helper;
+
 use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\LexerInterface;
 use Symfony\Component\Console\Formatter\Visitors\OutputBuildVisitorInterface;
@@ -76,7 +77,7 @@ class WordWrapperHelper extends Helper
     }
 
     /**
-     * @param string                         $string The text
+     * @param string                         $string       The text
      * @param int|WrapperStyleInterface|null $styleOrWidth
      *
      * @return string
@@ -89,7 +90,7 @@ class WordWrapperHelper extends Helper
     }
 
     /**
-     * @param string                         $string The text
+     * @param string                         $string       The text
      * @param int|WrapperStyleInterface|null $styleOrWidth
      *
      * @return string
