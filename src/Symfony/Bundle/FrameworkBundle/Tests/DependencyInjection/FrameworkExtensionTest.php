@@ -46,6 +46,7 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\Serializer\Mapping\Loader\AnnotationLoader;
 use Symfony\Component\Serializer\Mapping\Loader\XmlFileLoader;
 use Symfony\Component\Serializer\Mapping\Loader\YamlFileLoader;
+use Symfony\Component\Serializer\Normalizer\ConstraintViolationListNormalizer;
 use Symfony\Component\Serializer\Normalizer\DataUriNormalizer;
 use Symfony\Component\Serializer\Normalizer\DateIntervalNormalizer;
 use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
@@ -1146,8 +1147,8 @@ abstract class FrameworkExtensionTest extends TestCase
         $this->assertNull($container->getDefinition('serializer.mapping.class_metadata_factory')->getArgument(1));
         $this->assertEquals(new Reference('serializer.name_converter.camel_case_to_snake_case'), $container->getDefinition('serializer.name_converter.metadata_aware')->getArgument(1));
         $this->assertEquals(new Reference('property_info', ContainerBuilder::IGNORE_ON_INVALID_REFERENCE), $container->getDefinition('serializer.normalizer.object')->getArgument(3));
-        $this->assertEquals(['setCircularReferenceHandler', [new Reference('my.circular.reference.handler')]], $container->getDefinition('serializer.normalizer.object')->getMethodCalls()[0]);
-        $this->assertEquals(['setMaxDepthHandler', [new Reference('my.max.depth.handler')]], $container->getDefinition('serializer.normalizer.object')->getMethodCalls()[1]);
+        $this->assertArrayHasKey('circular_reference_handler', $container->getDefinition('serializer.normalizer.object')->getArgument(6));
+        $this->assertEquals(['setMaxDepthHandler', [new Reference('my.max.depth.handler')]], $container->getDefinition('serializer.normalizer.object')->getMethodCalls()[0]);
     }
 
     public function testRegisterSerializerExtractor()
@@ -1219,6 +1220,18 @@ abstract class FrameworkExtensionTest extends TestCase
 
         $this->assertEquals('Symfony\Component\Serializer\Normalizer\ObjectNormalizer', $definition->getClass());
         $this->assertEquals(-1000, $tag[0]['priority']);
+    }
+
+    public function testConstraintViolationListNormalizerRegistered()
+    {
+        $container = $this->createContainerFromFile('full');
+
+        $definition = $container->getDefinition('serializer.normalizer.constraint_violation_list');
+        $tag = $definition->getTag('serializer.normalizer');
+
+        $this->assertEquals(ConstraintViolationListNormalizer::class, $definition->getClass());
+        $this->assertEquals(-915, $tag[0]['priority']);
+        $this->assertEquals(new Reference('serializer.name_converter.metadata_aware'), $definition->getArgument(1));
     }
 
     public function testSerializerCacheActivated()

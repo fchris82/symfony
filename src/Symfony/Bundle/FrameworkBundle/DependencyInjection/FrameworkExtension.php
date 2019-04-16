@@ -1510,7 +1510,10 @@ class FrameworkExtension extends Extension
         }
 
         if (isset($config['circular_reference_handler']) && $config['circular_reference_handler']) {
-            $container->getDefinition('serializer.normalizer.object')->addMethodCall('setCircularReferenceHandler', [new Reference($config['circular_reference_handler'])]);
+            $arguments = $container->getDefinition('serializer.normalizer.object')->getArguments();
+            $context = ($arguments[6] ?? []) + ['circular_reference_handler' => new Reference($config['circular_reference_handler'])];
+            $container->getDefinition('serializer.normalizer.object')->setArgument(5, null);
+            $container->getDefinition('serializer.normalizer.object')->setArgument(6, $context);
         }
 
         if ($config['max_depth_handler'] ?? false) {
@@ -1689,9 +1692,9 @@ class FrameworkExtension extends Extension
             $container->removeDefinition('messenger.transport.amqp.factory');
         } else {
             $container->getDefinition('messenger.transport.symfony_serializer')
-                ->replaceArgument(1, $config['symfony_serializer']['format'])
-                ->replaceArgument(2, $config['symfony_serializer']['context']);
-            $container->setAlias('messenger.default_serializer', $config['default_serializer']);
+                ->replaceArgument(1, $config['serializer']['symfony_serializer']['format'])
+                ->replaceArgument(2, $config['serializer']['symfony_serializer']['context']);
+            $container->setAlias('messenger.default_serializer', $config['serializer']['default_serializer']);
         }
 
         $senderAliases = [];
