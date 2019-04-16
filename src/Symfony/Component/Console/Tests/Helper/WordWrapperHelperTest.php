@@ -3,6 +3,7 @@
 namespace Symfony\Component\Console\Tests\Helper;
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Formatter\Visitors\WrapperStyle;
 use Symfony\Component\Console\Helper\WordWrapperHelper;
 
 /**
@@ -11,211 +12,103 @@ use Symfony\Component\Console\Helper\WordWrapperHelper;
 class WordWrapperHelperTest extends TestCase
 {
     /**
-     * @param int    $width
-     * @param string $break
-     *
-     * @dataProvider dpTestConstructorExceptions
-     */
-    public function testConstructorExceptions($width, $break)
-    {
-        $wordWrapper = new WordWrapperHelper();
-        $this->expectException(\InvalidArgumentException::class);
-        $wordWrapper->wordwrap('test', $width, WordWrapperHelper::DEFAULT_CUT, $break);
-    }
-
-    public function dpTestConstructorExceptions()
-    {
-        return [
-            [0, PHP_EOL],
-            [-1, PHP_EOL],
-            [0, ''],
-            [1, ''],
-        ];
-    }
-
-    /**
-     * @param string $input
-     * @param int    $width
-     * @param string $break
-     * @param int    $cutOptions
-     * @param string $output
+     * @param string           $input
+     * @param int|WrapperStyle $styleOrWidth
+     * @param string           $output
      *
      * @dataProvider dpWordwrap
      */
-    public function testWordwrap($input, $width, $cutOptions, $break, $output)
+    public function testWordwrap($input, $styleOrWidth, $output)
     {
         $wordWrapper = new WordWrapperHelper();
-        $response = $wordWrapper->wordwrap($this->getInputContents($input), $width, $cutOptions, $break);
+        $response = $wordWrapper->wordwrap($input, $styleOrWidth);
 
-        $this->assertEquals($this->getOutputContents($output), $response);
+        $this->assertEquals($output, $response);
     }
 
     /**
      * Maybe in the future it should behave differently from wordwrap() function that is why it same the other now.
      *
-     * @param string $input
-     * @param int    $width
-     * @param string $break
-     * @param int    $cutOptions
-     * @param string $output
+     * @param string           $input
+     * @param int|WrapperStyle $styleOrWidth
+     * @param string           $output
      *
      * @dataProvider dpWordwrap
      */
-    public function testStaticWrap($input, $width, $cutOptions, $break, $output)
+    public function testStaticWrap($input, $styleOrWidth, $output)
     {
-        $response = WordWrapperHelper::wrap($this->getInputContents($input), $width, $cutOptions, $break);
+        $response = WordWrapperHelper::wrap($input, $styleOrWidth);
 
-        $this->assertEquals($this->getOutputContents($output), $response);
+        $this->assertEquals($output, $response);
     }
 
     public function dpWordwrap()
     {
-        $baseBreak = "\n";
-        $customBreak = "__break__\n";
-
+        $fillUpStyle = WrapperStyle::create()->setFillUpString(' ');
         return [
             // Check empty
-            ['', 2, WordWrapperHelper::CUT_ALL, $baseBreak, ''],
-            ['', 2, WordWrapperHelper::CUT_ALL | WordWrapperHelper::CUT_FILL_UP_MISSING, $baseBreak, '  '],
-            [$baseBreak, 2, WordWrapperHelper::CUT_ALL, $baseBreak, $baseBreak],
-            [$baseBreak, 2, WordWrapperHelper::CUT_ALL | WordWrapperHelper::CUT_FILL_UP_MISSING, $baseBreak, '  '.$baseBreak.'  '],
+            ['', 2, ''],
+            ['', $fillUpStyle->setWidth(2), '  '],
+            ["\n", 2, "\n"],
+            ["\n", $fillUpStyle->setWidth(2), "  \n  "],
             // Check limit and UTF-8
             [
                 'öüóőúéáű',
                 8,
-                WordWrapperHelper::CUT_LONG_WORDS,
-                $baseBreak,
                 'öüóőúéáű',
             ],
             [
                 'öüóőúéáű',
-                4,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                'öüóő'.$baseBreak.'úéáű',
+                (clone $fillUpStyle)->setWidth(4),
+                "öüóő\núéáű",
             ],
             [
                 'öüóőúéáű',
-                6,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                'öüóőúé'.$baseBreak.'áű    ',
+                (clone $fillUpStyle)->setWidth(6),
+                "öüóőúé\náű    ",
             ],
             // UTF-8 + tags
             [
                 '<error>öüóőúéáű</error>',
-                8,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
+                (clone $fillUpStyle)->setWidth(8),
                 '<error>öüóőúéáű</error>',
             ],
             [
                 'öüó<error>őú</error>éáű',
-                8,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
+                (clone $fillUpStyle)->setWidth(8),
                 'öüó<error>őú</error>éáű',
             ],
             [
                 'foo <error>bar</error> baz',
-                3,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                implode($baseBreak, ['foo', '<error>bar</error>', 'baz']),
+                (clone $fillUpStyle)->setWidth(3),
+                implode("\n", ['foo', '<error>bar</error>', 'baz']),
             ],
             [
                 'foo <error>bar</error> baz',
-                2,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                implode($baseBreak, ['fo', 'o ', '<error>ba', 'r</error> ', 'ba', 'z ']),
+                (clone $fillUpStyle)->setWidth(2),
+                implode("\n", ['fo', 'o ', '<error>ba', 'r</error> ', 'ba', 'z ']),
             ],
             // Escaped tags
             [
                 'foo \<error>bar\</error> baz',
-                3,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                implode($baseBreak, ['foo', '\<e', 'rro', 'r>b', 'ar\\', '</e', 'rro', 'r> ', 'baz']),
+                (clone $fillUpStyle)->setWidth(10),
+                implode("\n", ['foo       ', '\<error>bar', '\</error>  ', 'baz       ']),
+            ],
+            [
+                'foo \<error>bar\</error> baz',
+                (clone $fillUpStyle)->setWidth(3),
+                implode("\n", ['foo', '<er', 'ror', '>  ', 'bar', '</e', 'rro', 'r> ', 'baz']),
             ],
             [
                 'foo<error>bar</error>baz foo',
-                3,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                implode($baseBreak, ['foo', '<error>bar</error>', 'baz', 'foo']),
+                (clone $fillUpStyle)->setWidth(3),
+                implode("\n", ['foo', '<error>bar</error>', 'baz', 'foo']),
             ],
             [
                 'foo<error>bar</error>baz foo',
-                2,
-                WordWrapperHelper::CUT_LONG_WORDS | WordWrapperHelper::CUT_FILL_UP_MISSING,
-                $baseBreak,
-                implode($baseBreak, ['fo', 'o<error>b', 'ar</error>', 'ba', 'z ', 'fo', 'o ']),
-            ],
-            // Check simple text
-            [
-                'lipsum.txt',
-                120,
-                WordWrapperHelper::CUT_LONG_WORDS,
-                $baseBreak,
-                'lipsum.txt',
-            ],
-            // Check colored text
-            [
-                'lipsum_with_tags.txt',
-                120,
-                WordWrapperHelper::CUT_LONG_WORDS,
-                $baseBreak,
-                'lipsum_with_tags.txt',
-            ],
-            // Check custom break
-            [
-                'lipsum_with_tags_and_custom_break.txt',
-                120,
-                WordWrapperHelper::CUT_LONG_WORDS,
-                $customBreak,
-                'lipsum_with_tags_and_custom_break.txt',
-            ],
-            // Check long words
-            [
-                'with_long_words.txt',
-                30,
-                WordWrapperHelper::CUT_LONG_WORDS,
-                $baseBreak,
-                'with_long_words_with_default_cut.txt',
-            ],
-            [
-                'with_long_words.txt',
-                30,
-                WordWrapperHelper::CUT_DISABLE,
-                $baseBreak,
-                'with_long_words_without_cut.txt',
-            ],
-            [
-                'with_long_words.txt',
-                30,
-                WordWrapperHelper::CUT_ALL,
-                $baseBreak,
-                'with_long_words_with_cut_all.txt',
+                (clone $fillUpStyle)->setWidth(2),
+                implode("\n", ['fo', 'o<error>b', 'ar</error>', 'ba', 'z ', 'fo', 'o ']),
             ],
         ];
-    }
-
-    protected function getInputContents($filenameOrText)
-    {
-        $file = __DIR__.'/../Fixtures/Helper/WordWrapper/input/'.$filenameOrText;
-
-        return file_exists($file) && is_file($file)
-            ? file_get_contents($file)
-            : $filenameOrText;
-    }
-
-    protected function getOutputContents($filenameOrText)
-    {
-        $file = __DIR__.'/../Fixtures/Helper/WordWrapper/output/'.$filenameOrText;
-
-        return file_exists($file) && is_file($file)
-            ? file_get_contents($file)
-            : $filenameOrText;
     }
 }

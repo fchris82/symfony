@@ -393,6 +393,7 @@ final class ProgressBar
      */
     private function overwrite(string $message): void
     {
+        $prefix = null;
         if ($this->overwrite) {
             if (!$this->firstRun) {
                 if ($this->output instanceof ConsoleSectionOutput) {
@@ -401,19 +402,22 @@ final class ProgressBar
                 } else {
                     // Erase previous lines
                     if ($this->formatLineCount > 0) {
-                        $message = str_repeat("\x1B[1A\x1B[2K", $this->formatLineCount).$message;
+                        $prefix = str_repeat("\x1B[1A\x1B[2K", $this->formatLineCount);
                     }
 
                     // Move the cursor to the beginning of the line and erase the line
-                    $message = "\x0D\x1B[2K$message";
+                    $prefix = "\x0D\x1B[2K$prefix";
                 }
             }
         } elseif ($this->step > 0) {
-            $message = PHP_EOL.$message;
+            $prefix = PHP_EOL;
         }
 
         $this->firstRun = false;
 
+        if (null !== $prefix) {
+            $this->output->write($prefix, false, OutputInterface::OUTPUT_RAW);
+        }
         $this->output->write($message);
     }
 

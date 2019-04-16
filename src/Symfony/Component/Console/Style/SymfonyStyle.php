@@ -13,6 +13,7 @@ namespace Symfony\Component\Console\Style;
 
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\Visitors\WrapperStyle;
 use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\SymfonyQuestionHelper;
@@ -386,7 +387,7 @@ class SymfonyStyle extends OutputStyle
     {
         // We need to know if the two last chars are PHP_EOL
         // Preserve the last 4 chars inserted (PHP_EOL on windows is two chars) in the history buffer
-        $this->bufferedOutput->write(substr($message, -4), $newLine, $type);
+        $this->bufferedOutput->write(substr($message, -4), $newLine, self::OUTPUT_RAW);
     }
 
     private function createBlock(iterable $messages, string $type = null, string $style = null, string $prefix = ' ', bool $padding = false, bool $escape = false)
@@ -409,9 +410,9 @@ class SymfonyStyle extends OutputStyle
 
             $lines = array_merge($lines, explode(PHP_EOL, WordWrapperHelper::wrap(
                 $message,
-                $this->lineLength - $prefixLength - $indentLength,
-                WordWrapperHelper::CUT_LONG_WORDS,
-                PHP_EOL
+                WrapperStyle::create()
+                    ->setWidth($this->lineLength - $prefixLength - $indentLength)
+                    ->setFillUpString(' ')
             )));
 
             if (\count($messages) > 1 && $key < \count($messages) - 1) {
@@ -439,6 +440,6 @@ class SymfonyStyle extends OutputStyle
             }
         }
 
-        return $lines;
+        return implode("\n", $lines);
     }
 }

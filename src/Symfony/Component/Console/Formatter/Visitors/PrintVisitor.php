@@ -27,15 +27,20 @@ use Symfony\Component\Console\Formatter\Tokens\WordToken;
  */
 class PrintVisitor extends AbstractVisitor implements OutputBuildVisitorInterface
 {
-    protected $full;
+    const PRINT_NORMAL = 0;
+    const PRINT_RAW = 1;
+    const PRINT_RAW_ESCAPED = 2;
+    const PRINT_DEBUG = 3;
+
+    protected $mode;
     protected $output;
 
     /**
-     * @param bool $full If it is true, the hidden elements will be shown also. You can use it for debug.
+     * @param int $mode
      */
-    public function __construct(bool $full = false)
+    public function __construct(int $mode = self::PRINT_NORMAL)
     {
-        $this->full = $full;
+        $this->mode = $mode;
     }
 
     public function visitFullText(FullTextToken $fullTextToken): void
@@ -74,18 +79,51 @@ class PrintVisitor extends AbstractVisitor implements OutputBuildVisitorInterfac
         $this->visit($decorationToken);
     }
 
+    /**
+     * @param Token|TokenWithChildren $token
+     */
     protected function visit(Token $token)
     {
-        if ($token instanceof TokenWithChildren && $token->getIterator()->count()) {
+        if ($this->tokenNeedsHandleChildren($token)) {
             /** @var TokenInterface $child */
             foreach ($token->getIterator() as $child) {
                 $child->accept($this);
             }
-        } elseif ($token->getLength()) {
-            $this->output .= $token->getOriginalStringRepresentation();
-        } elseif ($this->full) {
-            $this->output .= '[' . (string) $token . ']';
+        } else {
+            switch ($this->mode) {
+                case self::PRINT_NORMAL:
+                    if ($token->getLength()) {
+                        $this->output .= $token->getOriginalStringRepresentation();
+                    }
+                    break;
+                case self::PRINT_RAW_ESCAPED:
+                    // Escaping "tag" words which aren't real tags.
+                    if ($token->getLength()
+                        && '<' == substr($token->getOriginalStringRepresentation(), 0, 1)
+                        && '>' == substr($token->getOriginalStringRepresentation(), -1)
+                    ) {
+                        $this->output .= '\\';
+                    }
+                    // There isn't break here, it is correct!
+                case self::PRINT_RAW:
+                    $this->output .= $token->getOriginalStringRepresentation();
+                    break;
+                case self::PRINT_DEBUG:
+                    $this->output .= $token->getLength()
+                        ? $token->getOriginalStringRepresentation()
+                        : '[' . (string)$token . ']';
+                    break;
+            }
         }
+    }
+
+    protected function tokenNeedsHandleChildren(Token $token)
+    {
+        if (in_array($this->mode, [self::PRINT_RAW, self::PRINT_RAW_ESCAPED]) && $token instanceof FullTagToken) {
+            return false;
+        }
+
+        return $token instanceof TokenWithChildren && $token->getIterator()->count();
     }
 
     public function getOutput(): string

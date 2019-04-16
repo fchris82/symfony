@@ -12,6 +12,7 @@
 namespace Symfony\Component\Console\Helper;
 
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatterInterface;
 
 /**
  * Helper is the base class for all helper classes.
@@ -125,27 +126,12 @@ abstract class Helper implements HelperInterface
         return self::strlen(self::removeDecoration($formatter, $string));
     }
 
-    /**
-     * Sometimes we need to find the format tags. This regex "placeholders":
-     *      - \\0 --> full open or close tag
-     *      - \\1 --> tag "inside"
-     *      - \\2 --> only tag name.
-     *
-     *      |     \\0    |    \\1   |   \\2   |
-     *      | ---------- | -------- | ------- |
-     *      | <comment>  | comment  | comment |
-     *      | </comment> | /comment | comment |
-     *      | </>        | /        | (empty) |
-     *
-     * @return string
-     */
-    public static function getFormatTagRegexPattern(): string
-    {
-        return sprintf('{<((%1$s)|/(%1$s)?)>}ix', self::FORMAT_TAG_REGEX);
-    }
-
     public static function removeDecoration(OutputFormatterInterface $formatter, $string)
     {
+        if ($formatter instanceof TokenizeOutputFormatterInterface) {
+            return $formatter->removeDecoration($string);
+        }
+
         $isDecorated = $formatter->isDecorated();
         $formatter->setDecorated(false);
         // remove <...> formatting

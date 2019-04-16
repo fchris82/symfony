@@ -30,6 +30,7 @@ class LexerTest extends TestCase
     {
         return [
             ['', "EosToken()"],
+            ['0', "WordToken(0)\nEosToken()"],
             ['word', "WordToken(word)\nEosToken()"],
             ['<tag>', "FullTagToken(TagToken<tag>)\nEosToken()"],
             ['<tag/>', "FullTagToken(TagToken<tag/>)\nEosToken()"],

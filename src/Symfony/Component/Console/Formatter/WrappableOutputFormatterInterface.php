@@ -16,7 +16,7 @@ namespace Symfony\Component\Console\Formatter;
  *
  * @author Roland Franssen <franssen.roland@gmail.com>
  *
- * @deprecated Use WrapperHelper if you need wrapping.
+ * @deprecated Use the <wrap=XXX> formation tag instead of this.
  */
 interface WrappableOutputFormatterInterface extends OutputFormatterInterface
 {
@@ -30,9 +30,8 @@ interface WrappableOutputFormatterInterface extends OutputFormatterInterface
      *
      * @param string   $message
      * @param int      $width
-     * @param int|null $cutOption
      *
      * @return string
      */
-    public function wordwrap(string $message, int $width, int $cutOption = null): string;
+    public function wordwrap(string $message, int $width): string;
 }

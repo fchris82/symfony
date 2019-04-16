@@ -223,7 +223,7 @@ class ProgressIndicator
     private function overwrite(string $message)
     {
         if ($this->output->isDecorated()) {
-            $this->output->write("\x0D\x1B[2K");
+            $this->output->write("\x0D\x1B[2K", false, OutputInterface::OUTPUT_RAW);
             $this->output->write($message);
         } else {
             $this->output->writeln($message);

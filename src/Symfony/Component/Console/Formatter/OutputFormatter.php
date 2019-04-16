@@ -20,6 +20,7 @@ use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
 use Symfony\Component\Console\Formatter\Visitors\StyleVisitor;
 use Symfony\Component\Console\Formatter\Visitors\VisitorIterator;
 use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
+use Symfony\Component\Console\Helper\Helper;
 
 /**
  * Formatter class for console output.
@@ -28,7 +29,7 @@ use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
  * @author Roland Franssen <franssen.roland@gmail.com>
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-class OutputFormatter implements OutputFormatterInterface
+class OutputFormatter implements TokenizeOutputFormatterInterface
 {
     /** @var bool */
     protected $decorated;
@@ -165,10 +166,10 @@ class OutputFormatter implements OutputFormatterInterface
      */
     public function format($message)
     {
-        $fullTextTokens = $this->lexer->tokenize($message);
+        $fullTextTokens = $this->lexer->tokenize((string) $message);
         /** @var FormatterVisitorInterface $visitor */
         foreach ($this->visitorIterator as $visitor) {
-            // skips the decorator visitors
+            // Skips the decorator visitors
             if (!$this->isDecorated() && $visitor instanceof DecoratorVisitorInterface) {
                 continue;
             }
@@ -184,5 +185,23 @@ class OutputFormatter implements OutputFormatterInterface
         }
 
         throw new InvalidArgumentException(sprintf('The last visitor should be implemented the `%s` interface!', OutputBuildVisitorInterface::class));
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function removeDecoration($str)
+    {
+        // Escape escape
+        $str = str_replace('\\<', "\0", $str);
+        $str = preg_replace(sprintf(
+            "{(<(%s)>|</(%s)?>|\033[^m]+m)}",
+            Helper::FORMAT_TAG_REGEX,
+            Helper::FORMAT_TAG_REGEX
+        ), '', $str);
+        // Unescape escaped < character
+        $str = str_replace("\0", '<', $str);
+
+        return $str;
     }
 }

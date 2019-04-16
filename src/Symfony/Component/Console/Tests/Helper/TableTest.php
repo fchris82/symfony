@@ -17,7 +17,6 @@ use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Helper\TableStyle;
-use Symfony\Component\Console\Helper\WordWrapperHelper;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\Console\Output\StreamOutput;
 
@@ -282,7 +281,7 @@ TABLE
             'Cell text with tags not used for Output styling' => [
                 ['ISBN', 'Title', 'Author'],
                 [
-                    ['<strong>99921-58-10-700</strong>', '<f>Divine Com</f>', 'Dante Alighieri'],
+                    ['\\<strong>99921-58-10-700\\</strong>', '\\<f>Divine Com\\</f>', 'Dante Alighieri'],
                     ['9971-5-0210-0', 'A Tale of Two Cities', 'Charles Dickens'],
                 ],
                 'default',
@@ -575,10 +574,10 @@ TABLE
                 'default',
                 <<<'TABLE'
 +-------+------------+
-[39;49m| [39;49m[37;41mDont break[39;49m[39;49m         |[39;49m
+| [37;41mDont break[39;49m[39;49m         |[39;49m
 [39;49m| [39;49m[37;41mhere[39;49m               |
 +-------+------------+
-[39;49m| foo   | [39;49m[37;41mDont break[39;49m[39;49m |[39;49m
+| foo   | [37;41mDont break[39;49m[39;49m |[39;49m
 [39;49m| bar   | [39;49m[37;41mhere[39;49m       |
 +-------+------------+
 
@@ -1058,7 +1057,7 @@ TABLE
             ->setRows([
                 ['Divine Comedy', 'A Tale of Two Cities', 'The Lord of the Rings', 'And Then There Were None'],
             ])
-            ->setColumnMaxWidth(1, 5, WordWrapperHelper::CUT_ALL)
+            ->setColumnMaxWidth(1, 5)
             ->setColumnMaxWidth(2, 10)
             ->setColumnMaxWidth(3, 15);
 
@@ -1067,9 +1066,10 @@ TABLE
         $expected =
             <<<TABLE
 +---------------+-------+----------+----------------+
-| Divine Comedy | A Tal | The Lord | And Then There |
-|               | e of  | of the   | Were None      |
-|               | Two C | Rings    |                |
+| Divine Comedy | A     | The Lord | And Then There |
+|               | Tale  | of the   | Were None      |
+|               | of    | Rings    |                |
+|               | Two C |          |                |
 |               | ities |          |                |
 +---------------+-------+----------+----------------+
 
@@ -1171,27 +1171,27 @@ TABLE;
 
         $expected =
             <<<TABLE
-+-----------------+-----------------+-----------------+
-| Lorem ipsum dolor sit amet, consectetur adipi       |
-| scing elit, sed do eiusmod tempor                   |
-+-----------------+-----------------+-----------------+
-| Lorem ipsum dolor sit amet, consectetur adipi       |
-| scing elit, sed do eiusmod tempor                   |
-+-----------------+-----------------+-----------------+
-| Lorem ipsum dolor sit amet, co    | hello world     |
-| nsectetur                         |                 |
-+-----------------+-----------------+-----------------+
-| hello world     | Lorem ipsum dolor sit amet, co    |
-|                 | nsectetur adipiscing elit         |
-+-----------------+-----------------+-----------------+
-| hello           | world           | Lorem ipsum dol |
-|                 |                 | or sit amet, co |
-|                 |                 | nsectetur       |
-+-----------------+-----------------+-----------------+
-| Symfony         | Test            | Lorem ipsum dol |
-|                 |                 | or sit amet, co |
-|                 |                 | nsectetur       |
-+-----------------+-----------------+-----------------+
++----------------+----------------+-----------------+
+| Lorem ipsum dolor sit amet, consectetur           |
+| adipiscing elit, sed do eiusmod tempor            |
++----------------+----------------+-----------------+
+| Lorem ipsum dolor sit amet, consectetur           |
+| adipiscing elit, sed do eiusmod tempor            |
++----------------+----------------+-----------------+
+| Lorem ipsum dolor sit amet,     | hello world     |
+| consectetur                     |                 |
++----------------+----------------+-----------------+
+| hello world    | Lorem ipsum dolor sit amet,      |
+|                | consectetur adipiscing elit      |
++----------------+----------------+-----------------+
+| hello          | world          | Lorem ipsum     |
+|                |                | dolor sit amet, |
+|                |                | consectetur     |
++----------------+----------------+-----------------+
+| Symfony        | Test           | Lorem ipsum     |
+|                |                | dolor sit amet, |
+|                |                | consectetur     |
++----------------+----------------+-----------------+
 
 TABLE;
 

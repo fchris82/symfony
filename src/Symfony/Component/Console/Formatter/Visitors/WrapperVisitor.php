@@ -42,20 +42,30 @@ class WrapperVisitor extends AbstractVisitor
      */
     protected $cursor = 0;
 
-    /** @var array|TagToken[] */
-    protected $localConfigurationStack = [];
-    /** @var array|TagToken[] */
-    protected $globalConfigurationStack = [];
+    /** @var WrapperStyle */
+    protected $baseStyle;
+    /** @var array|WrapperStyle[] */
+    protected $localStyleStack = [];
+    /** @var array|WrapperStyle[] */
+    protected $globalStyleStack = [];
+    /** @var WrapperStyle */
+    protected $activeStyle;
 
-    // Configuration parameters
-    /** @var null|int */
-    protected $widthLimit;
-    /** @var null|int */
-    protected $wordCutLimit;
-    /** @var bool */
-    protected $cutUrls = false;
-    /** @var null|string */
-    protected $fillUpString;
+    /**
+     * WrapperVisitor constructor.
+     *
+     * @param WrapperStyle $baseStyle
+     */
+    public function __construct(WrapperStyle $baseStyle = null)
+    {
+        $this->setBaseStyle($baseStyle ?: new WrapperStyle());
+    }
+
+    public function setBaseStyle(WrapperStyle $baseStyle): void
+    {
+        $this->baseStyle = $baseStyle;
+        $this->setActiveStyle();
+    }
 
     public function visitFullText(FullTextToken $fullTextToken): void
     {
@@ -80,7 +90,7 @@ class WrapperVisitor extends AbstractVisitor
     public function visitWord(WordToken $wordToken): void
     {
         // If the current line + the new token is longer than the limit.
-        if ($this->getWidthLimit() && $this->cursor + $wordToken->getLength() > $this->getWidthLimit()) {
+        if ($this->activeStyle->getWidth() && $this->cursor + $wordToken->getLength() > $this->activeStyle->getWidth()) {
             // If the word is needed to cut...
             if ($this->wordNeedToCut($wordToken)) {
                 $word = $wordToken->getOriginalStringRepresentation();
@@ -97,11 +107,11 @@ class WrapperVisitor extends AbstractVisitor
                     //      thisisaverylongwordt
                     //      hisisaverylongword
                     // But we use this "beautifier" function if the word cut limit is longer than 5 characters.
-                    $littleBeautifierCorrection = $this->getWordCutLimit() > 5 ? 4 : 0;
-                    if ($this->cursor + $littleBeautifierCorrection >= $this->getWidthLimit()) {
+                    $littleBeautifierCorrection = $this->activeStyle->getWordCutLimit() > 5 ? 4 : 0;
+                    if ($this->cursor + $littleBeautifierCorrection >= $this->activeStyle->getWidth()) {
                         $this->addNewLine($wordToken);
                     }
-                    $length = min($this->getWidthLimit() - $this->cursor, $wordToken->getLength() - $wordCursor);
+                    $length = min($this->activeStyle->getWidth() - $this->cursor, $wordToken->getLength() - $wordCursor);
                     $block = \mb_substr($word, $wordCursor, $length);
                     // Insert new token
                     $wordToken->insertBefore(new WordToken($block));
@@ -129,11 +139,11 @@ class WrapperVisitor extends AbstractVisitor
      */
     protected function wordNeedToCut(WordToken $token): bool
     {
-        if ($this->tokenIsAnUrl($token) && !$this->cutUrls) {
+        if ($this->tokenIsAnUrl($token) && !$this->activeStyle->isCutUrls()) {
             return false;
         }
 
-        $cutLength = $this->getWordCutLimit();
+        $cutLength = $this->activeStyle->getWordCutLimit();
         return $cutLength && $token->getLength() > $cutLength;
     }
 
@@ -156,10 +166,10 @@ class WrapperVisitor extends AbstractVisitor
         // If it is a simple close tag: </tag>, we close and delete the superfluous global configuration from the stack.
         if ($fullTagToken->isCloseTag() && !$fullTagToken->isSelfClosed()) {
             $depth = \count($this->tagStack);
-            if (array_key_exists($depth+1, $this->globalConfigurationStack)) {
-                unset($this->globalConfigurationStack[$depth-1]);
+            if (array_key_exists($depth+1, $this->globalStyleStack)) {
+                unset($this->globalStyleStack[$depth-1]);
             }
-            $this->resetActiveConfiguration();
+            $this->resetActiveStyle();
         }
     }
 
@@ -167,13 +177,13 @@ class WrapperVisitor extends AbstractVisitor
     {
         if (in_array($tagToken->getName(), ['wrap', 'nowrap'])) {
             if ($tagToken->getParent()->isStartTag()) {
-                $this->pushConfiguration($tagToken);
-                $this->setActiveConfiguration($tagToken);
+                $style = $this->parseStyle($tagToken);
+                $this->pushStyle($style, $tagToken->getParent()->isSelfClosed());
             } elseif ($tagToken->getParent()->isCloseTag() && !$tagToken->getParent()->isSelfClosed()) {
                 $depth = \count($this->tagStack);
-                if (array_key_exists($depth, $this->localConfigurationStack)) {
-                    unset($this->localConfigurationStack[$depth]);
-                    $this->resetActiveConfiguration();
+                if (array_key_exists($depth, $this->localStyleStack)) {
+                    unset($this->localStyleStack[$depth]);
+                    $this->resetActiveStyle();
                 }
             }
         }
@@ -211,11 +221,11 @@ class WrapperVisitor extends AbstractVisitor
                 break;
             }
         }
-        $this->fillUp($token);
         // We try to avoid the:
         //      - start full text width a "\n"
         //      - double "\n"
         if (!$token->isFirst() && !$this->tokenIsANewLineString($prev)) {
+            $this->fillUp($token);
             $token->insertBefore(new SeparatorToken("\n"));
         }
         // reset
@@ -262,24 +272,24 @@ class WrapperVisitor extends AbstractVisitor
      *
      * This function sets the "current" configurations.
      */
-    protected function resetActiveConfiguration(): void
+    protected function resetActiveStyle(): void
     {
-        $localDepth = $this->findLastConfigurationDepth($this->localConfigurationStack);
+        $localDepth = $this->findLastConfigurationDepth($this->localStyleStack);
         // set -1 if it is null
         if (null === $localDepth) {
             $localDepth = -1;
         }
-        $globalDepth = $this->findLastConfigurationDepth($this->globalConfigurationStack);
+        $globalDepth = $this->findLastConfigurationDepth($this->globalStyleStack);
         // set -1 if it is null
         if (null === $globalDepth) {
             $globalDepth = -1;
         }
         if ($globalDepth >= 0 && $globalDepth > $localDepth) {
-            $this->setActiveConfiguration($this->globalConfigurationStack[$globalDepth]);
+            $this->setActiveStyle($this->globalStyleStack[$globalDepth]);
         } elseif ($localDepth >= 0 && $localDepth >= $globalDepth) {
-            $this->setActiveConfiguration($this->localConfigurationStack[$localDepth]);
+            $this->setActiveStyle($this->localStyleStack[$localDepth]);
         } else {
-            $this->setActiveConfiguration(null);
+            $this->setActiveStyle(null);
         }
     }
 
@@ -308,13 +318,12 @@ class WrapperVisitor extends AbstractVisitor
      * Set active configuration what the program currently have to use.
      *
      * @param TagToken|null $wrapToken
+     *
+     * @return WrapperStyle
      */
-    protected function setActiveConfiguration(TagToken $wrapToken = null): void
+    protected function parseStyle(TagToken $wrapToken = null): WrapperStyle
     {
-        $this->widthLimit = null;
-        $this->wordCutLimit = null;
-        $this->cutUrls = false;
-        $this->fillUpString = null;
+        $style = new WrapperStyle();
 
         if ($wrapToken && $wrapToken->getName() != 'nowrap') {
             foreach ($wrapToken->getValues() as $value) {
@@ -329,24 +338,24 @@ class WrapperVisitor extends AbstractVisitor
                 }
                 switch ($attrName) {
                     case 'width':
-                        $this->widthLimit = $attrValue;
+                        $style->setWidth($attrValue);
                         break;
                     case 'cut_words':
                         // If it is set without any value, we cut every words
                         if (null === $attrValue) {
                             $attrValue = 1;
                         }
-                        $this->wordCutLimit = $attrValue;
+                        $style->setWordCutLimit($attrValue);
                         break;
                     case 'cut_urls':
-                        $this->cutUrls = true;
+                        $style->setCutUrls(true);
                         break;
                     case 'fill_up':
                         // If it is set without any value, we use ' ' (space)
                         if (null === $attrValue) {
                             $attrValue = ' ';
                         }
-                        $this->fillUpString = $attrValue;
+                        $style->setFillUpString($attrValue);
                         break;
                     default:
                         throw new \InvalidArgumentException(sprintf(
@@ -356,36 +365,24 @@ class WrapperVisitor extends AbstractVisitor
                 }
             }
         }
+
+        return $style;
     }
 
-    protected function pushConfiguration(TagToken $wrapToken): void
+    protected function setActiveStyle(WrapperStyle $style = null)
+    {
+        $this->activeStyle = $style ?: $this->baseStyle;
+    }
+
+    protected function pushStyle(WrapperStyle $style, bool $isGlobal = false): void
     {
         $depth = \count($this->tagStack);
-        if ($wrapToken->getParent()->isSelfClosed()) {
-            $this->globalConfigurationStack[$depth-1] = $wrapToken;
+        if ($isGlobal) {
+            $this->globalStyleStack[$depth-1] = $style;
         } else {
-            $this->localConfigurationStack[$depth] = $wrapToken;
+            $this->localStyleStack[$depth] = $style;
         }
-    }
-
-    /**
-     * Get configuration value.
-     *
-     * @return int|null
-     */
-    protected function getWidthLimit(): ?int
-    {
-        return $this->widthLimit;
-    }
-
-    /**
-     * Get configuration value.
-     *
-     * @return int|null
-     */
-    protected function getWordCutLimit(): ?int
-    {
-        return null === $this->wordCutLimit ? $this->getWidthLimit() : $this->wordCutLimit;
+        $this->setActiveStyle($style);
     }
 
     /**
@@ -395,11 +392,14 @@ class WrapperVisitor extends AbstractVisitor
      */
     protected function fillUp(TokenInterface $newLineBorderToken): void
     {
-        if ($this->fillUpString) {
-            $missingChars = $this->getWidthLimit() - $this->cursor;
-            if ($missingChars > 0 && $missingChars < $this->getWidthLimit()) {
-                $patternLength = \mb_strlen($this->fillUpString);
-                $fillUpChars = \mb_substr(str_repeat($this->fillUpString, ceil($missingChars/$patternLength)), -$missingChars);
+        if ($this->activeStyle->getFillUpString()) {
+            $missingChars = $this->activeStyle->getWidth() - $this->cursor;
+            if ($missingChars > 0 && $missingChars <= $this->activeStyle->getWidth()) {
+                $patternLength = \mb_strlen($this->activeStyle->getFillUpString());
+                $fillUpChars = \mb_substr(str_repeat(
+                    $this->activeStyle->getFillUpString(),
+                    ceil($missingChars/$patternLength)
+                ), -$missingChars);
                 $newLineBorderToken->insertBefore(new DecorationToken($fillUpChars));
             }
         }

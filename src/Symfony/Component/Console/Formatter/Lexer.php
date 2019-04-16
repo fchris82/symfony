@@ -15,6 +15,8 @@ use Symfony\Component\Console\Exception\FormatterTooLargeInputException;
 use Symfony\Component\Console\Formatter\Tokens\EosToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
 use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
+use Symfony\Component\Console\Formatter\Tokens\TokenInterface;
+use Symfony\Component\Console\Formatter\Tokens\TokenWithChildren;
 use Symfony\Component\Console\Formatter\Tokens\WordToken;
 use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
 use Symfony\Component\Console\Helper\Helper;
@@ -24,7 +26,7 @@ use Symfony\Component\Console\Helper\Helper;
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-class Lexer
+class Lexer implements LexerInterface
 {
     /** @var FullTextToken */
     protected $fullTextToken;
@@ -34,11 +36,11 @@ class Lexer
      *
      * @return FullTextToken
      */
-    public function tokenize($text)
+    public function tokenize(string $text): \IteratorAggregate
     {
         $text = str_replace(["\r\n", "\r"], "\n", $text);
         $cursor = 0;
-        // Don't use here mb_* functions! The PREG_OFFSET_CAPTURE give use "byte" value!
+        // Don't use mb_* functions here! The PREG_OFFSET_CAPTURE gives us "byte" value!
         $end = \strlen($text);
         // 240x55 = 13200
         if ($end > 13200 && \substr_count($text, ' ') > 5000) {
@@ -52,27 +54,27 @@ class Lexer
             $tag = $match[0];
 
             // Add the text up to the next tag.
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $textBlock = \substr($text, $cursor, $pos - $cursor);
-            if ($textBlock) {
+            if ('' != $textBlock) {
                 $this->tokenizeTextBlock($textBlock);
             }
             $cleanTag = ltrim($tag, '\\');
             // It is an escaped tag:
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             if (\strlen($tag) != \strlen($cleanTag)) {
                 $this->fullTextToken->push(new WordToken($cleanTag));
             } else {
                 $this->fullTextToken->push(new FullTagToken($cleanTag));
             }
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $cursor = $pos + \strlen($tag);
         }
 
         if ($cursor != $end) {
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $lastBlock = \substr($text, $cursor);
-            if ($lastBlock) {
+            if ('' != $lastBlock) {
                 $this->tokenizeTextBlock($lastBlock);
             }
         }
@@ -85,29 +87,28 @@ class Lexer
     protected function tokenizeTextBlock($textBlock)
     {
         $cursor = 0;
-        // Don't use here mb_* functions! The PREG_OFFSET_CAPTURE give use "byte" value!
+        // Don't use mb_* functions here! The PREG_OFFSET_CAPTURE gives us "byte" value!
         $end = \strlen($textBlock);
-        $pattern = sprintf('{\s}u', Helper::FORMAT_TAG_REGEX);
-        preg_match_all($pattern, $textBlock, $matches, PREG_OFFSET_CAPTURE);
+        preg_match_all('{\s}u', $textBlock, $matches, PREG_OFFSET_CAPTURE);
         foreach ($matches[0] as $i => $match) {
             $pos = $match[1];
             $separator = $match[0];
 
             // Add the text up to the next tag.
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $word = \substr($textBlock, $cursor, $pos - $cursor);
-            if ($word) {
+            if ('' != $word) {
                 $this->fullTextToken->push(new WordToken($word));
             }
             $this->fullTextToken->push(new SeparatorToken($separator));
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $cursor = $pos + \strlen($separator);
         }
 
         if ($cursor != $end) {
-            // Don't replace it to mb_* function!
+            // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $lastWord = \substr($textBlock, $cursor);
-            if ($lastWord) {
+            if ('' != $lastWord) {
                 $this->fullTextToken->push(new WordToken($lastWord));
             }
         }

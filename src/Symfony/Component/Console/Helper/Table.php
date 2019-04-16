@@ -14,7 +14,7 @@ namespace Symfony\Component\Console\Helper;
 use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Formatter\WrappableOutputFormatterInterface;
+use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -50,6 +50,11 @@ class Table
     private $rows = [];
 
     /**
+     * @var array
+     */
+    private $outputRows = [];
+
+    /**
      * Column widths cache.
      */
     private $effectiveColumnWidths = [];
@@ -83,8 +88,6 @@ class Table
      */
     private $columnWidths = [];
     private $columnMaxWidths = [];
-    private $columnWordWrapCutOption = [];
-    private $defaultColumnWordWrapCutOption = WordWrapperHelper::CUT_LONG_WORDS;
 
     private static $styles;
 
@@ -231,72 +234,9 @@ class Table
      *
      * @return $this
      */
-    public function setColumnMaxWidth(int $columnIndex, int $width, int $cutOption = null): self
+    public function setColumnMaxWidth(int $columnIndex, int $width): self
     {
-        if (!$this->output->getFormatter() instanceof WrappableOutputFormatterInterface) {
-            throw new \LogicException(sprintf('Setting a maximum column width is only supported when using a "%s" formatter, got "%s".', WrappableOutputFormatterInterface::class, \get_class($this->output->getFormatter())));
-        }
-
         $this->columnMaxWidths[$columnIndex] = $width;
-        $this->columnWordWrapCutOption[$columnIndex] = $cutOption;
-
-        return $this;
-    }
-
-    /**
-     * Sets the cut options of a column.
-     *
-     * @param int $columnIndex
-     * @param int $cutOptions
-     *
-     * @return $this
-     */
-    public function setColumnWordWrapCutOption(int $columnIndex, int $cutOptions): self
-    {
-        $this->columnWordWrapCutOption[$columnIndex] = $cutOptions;
-
-        return $this;
-    }
-
-    /**
-     * @param int $columnIndex
-     *
-     * @return int
-     */
-    public function getColumnWordWrapCutOption(int $columnIndex): int
-    {
-        if (!\array_key_exists($columnIndex, $this->columnWordWrapCutOption)
-            || null === $this->columnWordWrapCutOption[$columnIndex]
-        ) {
-            return $this->defaultColumnWordWrapCutOption;
-        }
-
-        return $this->columnWordWrapCutOption[$columnIndex];
-    }
-
-    /**
-     * @param int $defaultColumnWordWrapCutOption
-     *
-     * @return $this
-     */
-    public function setDefaultColumnWordWrapCutOption(int $defaultColumnWordWrapCutOption): self
-    {
-        $this->defaultColumnWordWrapCutOption = $defaultColumnWordWrapCutOption;
-
-        return $this;
-    }
-
-    /**
-     * @param array $columnWordWrapCutOptions
-     *
-     * @return $this
-     */
-    public function setColumnsWordWrapCutOptions(array $columnWordWrapCutOptions): self
-    {
-        $this->columnWordWrapCutOption = [];
-        foreach ($columnWordWrapCutOptions as $columnIndex => $columnOption) {
-            $this->setColumnWordWrapCutOption($columnIndex, $columnOption);
-        }
 
         return $this;
     }
@@ -438,6 +378,10 @@ class Table
         }
         $this->renderRowSeparator(self::SEPARATOR_BOTTOM, $this->footerTitle, $this->style->getFooterTitleFormat());
 
+        if (\count($this->outputRows)) {
+            // Add \n to every row.
+            $this->output->writeln(implode("\n", $this->outputRows));
+        }
         $this->cleanup();
         $this->rendered = true;
     }
@@ -494,7 +438,7 @@ class Table
             }
         }
 
-        $this->output->writeln(sprintf($this->style->getBorderFormat(), $markup));
+        $this->outputRows[] = sprintf($this->style->getBorderFormat(), $markup);
     }
 
     /**
@@ -523,7 +467,7 @@ class Table
             $rowContent .= $this->renderCell($row, $column, $cellFormat);
             $rowContent .= $this->renderColumnSeparator($last === $i ? self::BORDER_OUTSIDE : self::BORDER_INSIDE);
         }
-        $this->output->writeln($rowContent);
+        $this->outputRows[] = $rowContent;
     }
 
     /**
@@ -576,7 +520,7 @@ class Table
 
     private function buildTableRows($rows)
     {
-        /** @var WrappableOutputFormatterInterface $formatter */
+        /** @var OutputFormatterInterface $formatter */
         $formatter = $this->output->getFormatter();
         $unmergedRows = [];
         for ($rowKey = 0; $rowKey < \count($rows); ++$rowKey) {
@@ -587,10 +531,9 @@ class Table
                 $colspan = $cell instanceof TableCell ? $cell->getColspan() : 1;
 
                 if (isset($this->columnMaxWidths[$column]) && Helper::strlenWithoutDecoration($formatter, $cell) > $this->columnMaxWidths[$column]) {
-                    $cell = $formatter->format($formatter->wordwrap(
+                    $cell = $formatter->format(WordWrapperHelper::wrap(
                         $cell,
-                        $this->columnMaxWidths[$column] * $colspan,
-                        $this->getColumnWordWrapCutOption($column)
+                        $this->columnMaxWidths[$column] * $colspan
                     ));
                 }
                 if (!strstr($cell, "\n")) {
@@ -812,6 +755,7 @@ class Table
      */
     private function cleanup()
     {
+        $this->outputRows = [];
         $this->effectiveColumnWidths = [];
         $this->numberOfColumns = null;
     }

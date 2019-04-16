@@ -32,7 +32,7 @@ class WrapperVisitorTest extends TestCase
         $visitor = new WrapperVisitor();
         $fullText->accept($visitor);
 
-        $printVisitor = new PrintVisitor($full);
+        $printVisitor = new PrintVisitor($full ? PrintVisitor::PRINT_DEBUG : PrintVisitor::PRINT_NORMAL);
         $fullText->accept($printVisitor);
 
         $this->assertEquals($output, $printVisitor->getOutput());
@@ -94,7 +94,7 @@ EOS
         $visitor = new WrapperVisitor();
         $fullText->accept($visitor);
 
-        $printVisitor = new PrintVisitor(true);
+        $printVisitor = new PrintVisitor(PrintVisitor::PRINT_DEBUG);
         $fullText->accept($printVisitor);
 
         $this->assertEquals($this->getOutputContent($outputFile), $printVisitor->getOutput());

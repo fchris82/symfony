@@ -13,6 +13,7 @@ namespace Symfony\Component\Console\Descriptor;
 
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputDefinition;
@@ -123,7 +124,7 @@ class MarkdownDescriptor extends Descriptor
             .($command->getDescription() ? $command->getDescription()."\n\n" : '')
             .'### Usage'."\n\n"
             .array_reduce(array_merge([$command->getSynopsis()], $command->getAliases(), $command->getUsages()), function ($carry, $usage) {
-                return $carry.'* `'.$usage.'`'."\n";
+                return $carry.'* `'.OutputFormatter::escape($usage).'`'."\n";
             })
         );
 

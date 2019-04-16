@@ -754,7 +754,12 @@ class Application
         $this->doRenderException($e, $output);
 
         if (null !== $this->runningCommand) {
-            $output->writeln(sprintf('<info>%s</info>', sprintf($this->runningCommand->getSynopsis(), $this->getName())), OutputInterface::VERBOSITY_QUIET);
+            $output->writeln(sprintf(
+                '<info>%s</info>',
+                OutputFormatter::escape(
+                    sprintf($this->runningCommand->getSynopsis(), $this->getName())
+                )
+            ), OutputInterface::VERBOSITY_QUIET);
             $output->writeln('', OutputInterface::VERBOSITY_QUIET);
         }
     }

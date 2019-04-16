@@ -21,7 +21,7 @@ use Symfony\Component\Console\Formatter\Tokens\TagToken;
 use Symfony\Component\Console\Formatter\Tokens\WordToken;
 
 /**
- * Visitors for handling <href> tags!
+ * Visitor for handling <href> tags!
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */

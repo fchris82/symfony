@@ -313,7 +313,7 @@ class TokenStream implements TokenStreamInterface
      */
     public function isFirst(TokenInterface $token): bool
     {
-        return $this->tokens[0] === $token;
+        return spl_object_hash($this->tokens[0]) === spl_object_hash($token);
     }
 
     /**
@@ -321,7 +321,7 @@ class TokenStream implements TokenStreamInterface
      */
     public function isLast(TokenInterface $token): bool
     {
-        return $this->tokens[$this->count()-1] === $token;
+        return spl_object_hash($this->tokens[$this->count()-1]) === spl_object_hash($token);
     }
 
     /**

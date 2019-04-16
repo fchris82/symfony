@@ -37,7 +37,7 @@ class HrefVisitorTest extends TestCase
             $visitor = new HrefVisitor();
             $fullText->accept($visitor);
 
-            $printVisitor = new PrintVisitor($full);
+            $printVisitor = new PrintVisitor($full ? PrintVisitor::PRINT_DEBUG : PrintVisitor::PRINT_NORMAL);
             $fullText->accept($printVisitor);
 
             $this->assertEquals($output, $printVisitor->getOutput());

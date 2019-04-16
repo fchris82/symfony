@@ -136,11 +136,11 @@ class OutputTest extends TestCase
 
         $output->clear();
         $output->write('<bar>foo</bar>');
-        $this->assertEquals('<bar>foo</bar>', $output->output, '->write() do nothing when a style does not exist');
+        $this->assertEquals('foo', $output->output, '->write() unknwon tag isn\'t shown');
 
         $output->clear();
         $output->writeln('<bar>foo</bar>');
-        $this->assertEquals("<bar>foo</bar>\n", $output->output, '->writeln() do nothing when a style does not exist');
+        $this->assertEquals("foo\n", $output->output, '->writeln() unknown tag isn\'t shown');
     }
 
     /**
