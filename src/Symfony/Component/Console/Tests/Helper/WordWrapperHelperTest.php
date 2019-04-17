@@ -6,9 +6,6 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\Visitor\WrapperStyle;
 use Symfony\Component\Console\Helper\WordWrapperHelper;
 
-/**
- * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
- */
 class WordWrapperHelperTest extends TestCase
 {
     /**

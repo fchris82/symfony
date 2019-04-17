@@ -15,10 +15,6 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\OutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
-/**
- * @author Fabien Potencier <fabien@symfony.com>
- * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
- */
 class OutputFormatterTest extends TestCase
 {
     public function testEmptyTag()
