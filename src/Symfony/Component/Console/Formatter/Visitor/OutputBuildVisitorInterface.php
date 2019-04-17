@@ -9,14 +9,14 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Visitors;
+namespace Symfony\Component\Console\Formatter\Visitor;
 
 /**
- * Use this interface for decorator visitors. A visitor is a decorator visitor if it needs to run when decoration is
- * enabled, and it mustn't run when decoration is disabled.
+ * Use this interface for visitors that create outputs from token stream.
  *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-interface DecoratorVisitorInterface
+interface OutputBuildVisitorInterface
 {
+    public function getOutput(): string;
 }

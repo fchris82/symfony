@@ -9,9 +9,9 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Tokens;
+namespace Symfony\Component\Console\Formatter\Token;
 
-use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\FormatterVisitorInterface;
 
 /**
  * Separator string token. Every token is 1 char length in normal situations. Every char which fit with the \s regular

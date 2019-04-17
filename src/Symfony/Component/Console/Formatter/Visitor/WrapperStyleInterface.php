@@ -9,14 +9,14 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Visitors;
+namespace Symfony\Component\Console\Formatter\Visitor;
 
 /**
- * Use this interface for visitors that create outputs from token stream.
- *
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-interface OutputBuildVisitorInterface
+interface WrapperStyleInterface
 {
-    public function getOutput(): string;
+    public function getWidth(): ?int;
+
+    public static function create(): self;
 }

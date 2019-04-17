@@ -13,7 +13,7 @@ namespace Symfony\Component\Console\Style;
 
 use Symfony\Component\Console\Exception\RuntimeException;
 use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Formatter\Visitors\WrapperStyle;
+use Symfony\Component\Console\Formatter\Visitor\WrapperStyle;
 use Symfony\Component\Console\Helper\Helper;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\SymfonyQuestionHelper;

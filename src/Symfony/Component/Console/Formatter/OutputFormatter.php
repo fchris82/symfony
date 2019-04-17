@@ -12,14 +12,14 @@
 namespace Symfony\Component\Console\Formatter;
 
 use Symfony\Component\Console\Exception\InvalidArgumentException;
-use Symfony\Component\Console\Formatter\Visitors\DecoratorVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitors\HrefVisitor;
-use Symfony\Component\Console\Formatter\Visitors\OutputBuildVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
-use Symfony\Component\Console\Formatter\Visitors\StyleVisitor;
-use Symfony\Component\Console\Formatter\Visitors\VisitorIterator;
-use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
+use Symfony\Component\Console\Formatter\Visitor\DecoratorVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\FormatterVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\HrefVisitor;
+use Symfony\Component\Console\Formatter\Visitor\OutputBuildVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\PrintVisitor;
+use Symfony\Component\Console\Formatter\Visitor\StyleVisitor;
+use Symfony\Component\Console\Formatter\Visitor\VisitorIterator;
+use Symfony\Component\Console\Formatter\Visitor\WrapperVisitor;
 use Symfony\Component\Console\Helper\Helper;
 
 /**

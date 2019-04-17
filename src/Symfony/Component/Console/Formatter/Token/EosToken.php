@@ -9,9 +9,9 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Tokens;
+namespace Symfony\Component\Console\Formatter\Token;
 
-use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\FormatterVisitorInterface;
 
 /**
  * EOS is an abbreviation: End Of String. It is used for mark the end of full text.

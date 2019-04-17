@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Tokens;
+namespace Symfony\Component\Console\Formatter\Token;
 
 /**
  * It is a "special" token that has child tokens.

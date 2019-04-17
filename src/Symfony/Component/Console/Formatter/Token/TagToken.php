@@ -9,9 +9,9 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Tokens;
+namespace Symfony\Component\Console\Formatter\Token;
 
-use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\FormatterVisitorInterface;
 
 /**
  * Tag token is a "sub token"/children of the FullTagToken. Structure:.

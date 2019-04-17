@@ -9,9 +9,9 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Tokens;
+namespace Symfony\Component\Console\Formatter\Token;
 
-use Symfony\Component\Console\Formatter\Visitors\FormatterVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\FormatterVisitorInterface;
 
 /**
  * Decoration token for any decoration strings. Eg: `\033[32m`.

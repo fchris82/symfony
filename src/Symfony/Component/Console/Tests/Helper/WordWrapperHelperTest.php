@@ -3,7 +3,7 @@
 namespace Symfony\Component\Console\Tests\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Formatter\Visitors\WrapperStyle;
+use Symfony\Component\Console\Formatter\Visitor\WrapperStyle;
 use Symfony\Component\Console\Helper\WordWrapperHelper;
 
 /**

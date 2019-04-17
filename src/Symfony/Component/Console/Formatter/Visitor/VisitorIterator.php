@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Visitors;
+namespace Symfony\Component\Console\Formatter\Visitor;
 
 /**
  * An iterator for collecting and ordering visitors. You can set priority. The higher will run before the lower priority.

@@ -12,11 +12,11 @@ namespace Symfony\Component\Console\Helper;
 
 use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\LexerInterface;
-use Symfony\Component\Console\Formatter\Visitors\OutputBuildVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
-use Symfony\Component\Console\Formatter\Visitors\WrapperStyle;
-use Symfony\Component\Console\Formatter\Visitors\WrapperStyleInterface;
-use Symfony\Component\Console\Formatter\Visitors\WrapperVisitor;
+use Symfony\Component\Console\Formatter\Visitor\OutputBuildVisitorInterface;
+use Symfony\Component\Console\Formatter\Visitor\PrintVisitor;
+use Symfony\Component\Console\Formatter\Visitor\WrapperStyle;
+use Symfony\Component\Console\Formatter\Visitor\WrapperStyleInterface;
+use Symfony\Component\Console\Formatter\Visitor\WrapperVisitor;
 
 /**
  * You can wrap the text.

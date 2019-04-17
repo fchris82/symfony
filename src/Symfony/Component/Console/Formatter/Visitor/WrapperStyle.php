@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Visitors;
+namespace Symfony\Component\Console\Formatter\Visitor;
 
 /**
  * Wrapping style.

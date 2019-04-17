@@ -9,12 +9,12 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Tests\Formatter\Visitors;
+namespace Symfony\Component\Console\Tests\Formatter\Visitor;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\Lexer;
-use Symfony\Component\Console\Formatter\Visitors\HrefVisitor;
-use Symfony\Component\Console\Formatter\Visitors\PrintVisitor;
+use Symfony\Component\Console\Formatter\Visitor\HrefVisitor;
+use Symfony\Component\Console\Formatter\Visitor\PrintVisitor;
 
 class HrefVisitorTest extends TestCase
 {

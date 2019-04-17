@@ -9,18 +9,18 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Console\Formatter\Visitors;
+namespace Symfony\Component\Console\Formatter\Visitor;
 
-use Symfony\Component\Console\Formatter\Tokens\DecorationToken;
-use Symfony\Component\Console\Formatter\Tokens\EosToken;
-use Symfony\Component\Console\Formatter\Tokens\FullTagToken;
-use Symfony\Component\Console\Formatter\Tokens\FullTextToken;
-use Symfony\Component\Console\Formatter\Tokens\SeparatorToken;
-use Symfony\Component\Console\Formatter\Tokens\TagToken;
-use Symfony\Component\Console\Formatter\Tokens\Token;
-use Symfony\Component\Console\Formatter\Tokens\TokenInterface;
-use Symfony\Component\Console\Formatter\Tokens\TokenWithChildren;
-use Symfony\Component\Console\Formatter\Tokens\WordToken;
+use Symfony\Component\Console\Formatter\Token\DecorationToken;
+use Symfony\Component\Console\Formatter\Token\EosToken;
+use Symfony\Component\Console\Formatter\Token\FullTagToken;
+use Symfony\Component\Console\Formatter\Token\FullTextToken;
+use Symfony\Component\Console\Formatter\Token\SeparatorToken;
+use Symfony\Component\Console\Formatter\Token\TagToken;
+use Symfony\Component\Console\Formatter\Token\Token;
+use Symfony\Component\Console\Formatter\Token\TokenInterface;
+use Symfony\Component\Console\Formatter\Token\TokenWithChildren;
+use Symfony\Component\Console\Formatter\Token\WordToken;
 
 /**
  * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
