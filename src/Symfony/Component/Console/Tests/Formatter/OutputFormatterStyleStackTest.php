@@ -20,12 +20,12 @@ class OutputFormatterStyleStackTest extends TestCase
     public function testPush()
     {
         $stack = new OutputFormatterStyleStack();
-        $stack->push(1, $s1 = new OutputFormatterStyle('white', 'black'));
-        $stack->push(2, $s2 = new OutputFormatterStyle('yellow', 'blue'));
+        $stack->push($s1 = new OutputFormatterStyle('white', 'black'));
+        $stack->push($s2 = new OutputFormatterStyle('yellow', 'blue'));
 
         $this->assertEquals($s2, $stack->getCurrent());
 
-        $stack->push(3, $s3 = new OutputFormatterStyle('green', 'red'));
+        $stack->push($s3 = new OutputFormatterStyle('green', 'red'));
 
         $this->assertEquals($s3, $stack->getCurrent());
     }
@@ -33,17 +33,11 @@ class OutputFormatterStyleStackTest extends TestCase
     public function testPop()
     {
         $stack = new OutputFormatterStyleStack();
-        $stack->push(1, $s1 = new OutputFormatterStyle('white', 'black'));
-        $stack->push(2, $s2 = new OutputFormatterStyle('yellow', 'blue'));
+        $stack->push($s1 = new OutputFormatterStyle('white', 'black'));
+        $stack->push($s2 = new OutputFormatterStyle('yellow', 'blue'));
 
         $this->assertEquals($s2, $stack->pop());
         $this->assertEquals($s1, $stack->pop());
-
-        $stack->push(1, $s1 = new OutputFormatterStyle('white', 'black'));
-        $stack->push(2, $s2 = new OutputFormatterStyle('yellow', 'blue'));
-
-        $this->assertNull($stack->pop(3));
-        $this->assertEquals($s1, $stack->pop(1));
     }
 
     public function testPopEmpty()
@@ -57,14 +51,12 @@ class OutputFormatterStyleStackTest extends TestCase
     public function testPopNotLast()
     {
         $stack = new OutputFormatterStyleStack();
-        $stack->push(1, $s1 = new OutputFormatterStyle('white', 'black'));
-        $stack->push(2, $s2 = new OutputFormatterStyle('yellow', 'blue'));
-        $stack->push(3, $s3 = new OutputFormatterStyle('green', 'red'));
-        $stack->push(4, $s3 = new OutputFormatterStyle('magenta', 'cyan'));
+        $stack->push($s1 = new OutputFormatterStyle('white', 'black'));
+        $stack->push($s2 = new OutputFormatterStyle('yellow', 'blue'));
+        $stack->push($s3 = new OutputFormatterStyle('green', 'red'));
 
-        $this->assertEquals($s3, $stack->popByStyle($s3));
-        $this->assertEquals($s1, $stack->pop(1));
-        $this->assertEquals(new OutputFormatterStyle(), $stack->pop());
+        $this->assertEquals($s2, $stack->pop($s2));
+        $this->assertEquals($s1, $stack->pop());
     }
 
     /**
@@ -73,7 +65,7 @@ class OutputFormatterStyleStackTest extends TestCase
     public function testInvalidPop()
     {
         $stack = new OutputFormatterStyleStack();
-        $stack->push(1, new OutputFormatterStyle('white', 'black'));
-        $stack->popByStyle(new OutputFormatterStyle('yellow', 'blue'));
+        $stack->push(new OutputFormatterStyle('white', 'black'));
+        $stack->pop(new OutputFormatterStyle('yellow', 'blue'));
     }
 }

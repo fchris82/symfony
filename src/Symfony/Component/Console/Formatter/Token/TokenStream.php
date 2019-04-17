@@ -254,7 +254,7 @@ class TokenStream implements TokenStreamInterface
     protected function findIndex(TokenInterface $token): int
     {
         // pre-check before foreach
-        if ($this->current() === $token) {
+        if (spl_object_hash($this->current()) === spl_object_hash($token)) {
             return $this->current;
         }
         foreach ($this->tokens as $i => $child) {

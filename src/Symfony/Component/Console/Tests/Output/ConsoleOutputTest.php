@@ -12,7 +12,7 @@
 namespace Symfony\Component\Console\Tests\Output;
 
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\Output;
 
@@ -28,7 +28,7 @@ class ConsoleOutputTest extends TestCase
     public function testSetFormatter()
     {
         $output = new ConsoleOutput();
-        $outputFormatter = new OutputFormatter();
+        $outputFormatter = new TokenizeOutputFormatter();
         $output->setFormatter($outputFormatter);
         $this->assertSame($outputFormatter, $output->getFormatter());
     }

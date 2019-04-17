@@ -12,7 +12,7 @@
 namespace Symfony\Component\Console\Tests\Helper;
 
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
@@ -850,7 +850,7 @@ TABLE;
     {
         $sections = [];
         $stream = $this->getOutputStream(true);
-        $output = new ConsoleSectionOutput($stream->getStream(), $sections, $stream->getVerbosity(), $stream->isDecorated(), new OutputFormatter());
+        $output = new ConsoleSectionOutput($stream->getStream(), $sections, $stream->getVerbosity(), $stream->isDecorated(), new TokenizeOutputFormatter());
         $table = new Table($output);
         $table
             ->setHeaders(['ISBN', 'Title', 'Author', 'Price'])
@@ -885,7 +885,7 @@ TABLE;
     {
         $sections = [];
         $stream = $this->getOutputStream(true);
-        $output = new ConsoleSectionOutput($stream->getStream(), $sections, $stream->getVerbosity(), $stream->isDecorated(), new OutputFormatter());
+        $output = new ConsoleSectionOutput($stream->getStream(), $sections, $stream->getVerbosity(), $stream->isDecorated(), new TokenizeOutputFormatter());
         $table = new Table($output);
         $table
             ->setHeaders(['ISBN', 'Title', 'Author', 'Price'])
@@ -913,7 +913,7 @@ TABLE;
     {
         $sections = [];
         $stream = $this->getOutputStream();
-        $output = new ConsoleSectionOutput($stream->getStream(), $sections, $stream->getVerbosity(), $stream->isDecorated(), new OutputFormatter());
+        $output = new ConsoleSectionOutput($stream->getStream(), $sections, $stream->getVerbosity(), $stream->isDecorated(), new TokenizeOutputFormatter());
         $table = new Table($output);
         $table
             ->setHeaders(['ISBN', 'Title', 'Author', 'Price'])

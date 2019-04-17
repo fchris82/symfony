@@ -17,9 +17,8 @@ use Symfony\Component\Console\Exception\InvalidArgumentException;
  * Formatter style class for defining styles.
  *
  * @author Konstantin Kudryashov <ever.zet@gmail.com>
- * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-class OutputFormatterStyle implements OutputFormatterStyleInterface
+class OutputFormatterStyle implements VisitorOutputFormatterStyleInterface
 {
     private static $availableForegroundColors = [
         'black' => ['set' => 30, 'unset' => 39],
@@ -53,7 +52,9 @@ class OutputFormatterStyle implements OutputFormatterStyleInterface
 
     private $foreground;
     private $background;
+    private $href;
     private $options = [];
+    private $handlesHrefGracefully;
 
     /**
      * Initializes output formatter style.
@@ -119,6 +120,11 @@ class OutputFormatterStyle implements OutputFormatterStyleInterface
         $this->background = static::$availableBackgroundColors[$color];
     }
 
+    public function setHref(string $url): void
+    {
+        $this->href = $url;
+    }
+
     /**
      * Sets some specific style option.
      *
@@ -174,12 +180,39 @@ class OutputFormatterStyle implements OutputFormatterStyleInterface
      * @param string $text The text to style
      *
      * @return string
-     *
-     * @deprecated
      */
     public function apply($text)
     {
-        return sprintf('%s%s%s', $this->start(), $text, $this->close());
+        $setCodes = [];
+        $unsetCodes = [];
+
+        if (null === $this->handlesHrefGracefully) {
+            $this->handlesHrefGracefully = 'JetBrains-JediTerm' !== getenv('TERMINAL_EMULATOR');
+        }
+
+        if (null !== $this->foreground) {
+            $setCodes[] = $this->foreground['set'];
+            $unsetCodes[] = $this->foreground['unset'];
+        }
+        if (null !== $this->background) {
+            $setCodes[] = $this->background['set'];
+            $unsetCodes[] = $this->background['unset'];
+        }
+
+        foreach ($this->options as $option) {
+            $setCodes[] = $option['set'];
+            $unsetCodes[] = $option['unset'];
+        }
+
+        if (null !== $this->href && $this->handlesHrefGracefully) {
+            $text = "\033]8;;$this->href\033\\$text\033]8;;\033\\";
+        }
+
+        if (0 === \count($setCodes)) {
+            return $text;
+        }
+
+        return sprintf("\033[%sm%s\033[%sm", implode(';', $setCodes), $text, implode(';', $unsetCodes));
     }
 
     public function start(): string

@@ -13,7 +13,7 @@ namespace Symfony\Component\Console\Tests\Style;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -86,7 +86,7 @@ class SymfonyStyleTest extends TestCase
         $errorOutput = $this->getMockBuilder(OutputInterface::class)->getMock();
         $errorOutput
             ->method('getFormatter')
-            ->willReturn(new OutputFormatter());
+            ->willReturn(new TokenizeOutputFormatter());
         $errorOutput
             ->expects($this->once())
             ->method('write');
@@ -94,7 +94,7 @@ class SymfonyStyleTest extends TestCase
         $output = $this->getMockBuilder(ConsoleOutputInterface::class)->getMock();
         $output
             ->method('getFormatter')
-            ->willReturn(new OutputFormatter());
+            ->willReturn(new TokenizeOutputFormatter());
         $output
             ->expects($this->once())
             ->method('getErrorOutput')
@@ -109,7 +109,7 @@ class SymfonyStyleTest extends TestCase
         $output = $this->getMockBuilder(OutputInterface::class)->getMock();
         $output
             ->method('getFormatter')
-            ->willReturn(new OutputFormatter());
+            ->willReturn(new TokenizeOutputFormatter());
 
         $style = new SymfonyStyle($this->getMockBuilder(InputInterface::class)->getMock(), $output);
 

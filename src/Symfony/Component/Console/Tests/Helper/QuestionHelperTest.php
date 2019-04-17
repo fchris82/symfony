@@ -11,7 +11,7 @@
 
 namespace Symfony\Component\Console\Tests\Helper;
 
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Helper\FormatterHelper;
 use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Helper\QuestionHelper;
@@ -636,7 +636,7 @@ class QuestionHelperTest extends AbstractQuestionHelperTest
             '  [<info>łabądź</info>] baz',
         ];
         $output = $this->getMockBuilder('\Symfony\Component\Console\Output\OutputInterface')->getMock();
-        $output->method('getFormatter')->willReturn(new OutputFormatter());
+        $output->method('getFormatter')->willReturn(new TokenizeOutputFormatter());
 
         $dialog = new QuestionHelper();
         $helperSet = new HelperSet([new FormatterHelper()]);

@@ -11,7 +11,7 @@
 
 namespace Symfony\Component\Console\Output;
 
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 
 /**
@@ -38,7 +38,7 @@ class NullOutput implements OutputInterface
     public function getFormatter()
     {
         // to comply with the interface we must return a OutputFormatterInterface
-        return new OutputFormatter();
+        return new TokenizeOutputFormatter();
     }
 
     /**

@@ -16,7 +16,6 @@ use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * @author Jean-François Simon <contact@jfsimon.fr>
- * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
 class OutputFormatterStyleStack implements ResetInterface
 {
@@ -43,52 +42,32 @@ class OutputFormatterStyleStack implements ResetInterface
 
     /**
      * Pushes a style in the stack.
-     *
-     * @param int                           $depth
-     * @param OutputFormatterStyleInterface $style
      */
-    public function push(int $depth, OutputFormatterStyleInterface $style)
+    public function push(OutputFormatterStyleInterface $style)
     {
-        $this->styles[$depth] = $style;
+        $this->styles[] = $style;
     }
 
     /**
      * Pops a style from the stack.
      *
-     * @param int $depth
+     * @return OutputFormatterStyleInterface
      *
-     * @return OutputFormatterStyleInterface|null
+     * @throws InvalidArgumentException When style tags incorrectly nested
      */
-    public function pop(int $depth = null)
+    public function pop(OutputFormatterStyleInterface $style = null)
     {
         if (empty($this->styles)) {
             return $this->emptyStyle;
         }
 
-        if (null === $depth) {
-            $stackedStyle = array_pop($this->styles);
-
-            return $stackedStyle;
-        } elseif (\array_key_exists($depth, $this->styles)) {
-            $stackedStyle = $this->styles[$depth];
-            $length = array_search($depth, array_keys($this->styles));
-            $this->styles = \array_slice($this->styles, 0, $length);
-
-            return $stackedStyle;
+        if (null === $style) {
+            return array_pop($this->styles);
         }
 
-        return null;
-    }
-
-    public function popByStyle(OutputFormatterStyleInterface $style)
-    {
-        /**
-         * @var int
-         * @var OutputFormatterStyleInterface $stackedStyle
-         */
-        foreach (array_reverse($this->styles) as $index => $stackedStyle) {
-            if ($style->start().$style->close() === $stackedStyle->start().$stackedStyle->close()) {
-                $this->styles = \array_slice($this->styles, 0, \count($this->styles) - $index - 1, true);
+        foreach (array_reverse($this->styles, true) as $index => $stackedStyle) {
+            if ($style->apply('') === $stackedStyle->apply('')) {
+                $this->styles = \array_slice($this->styles, 0, $index);
 
                 return $stackedStyle;
             }
@@ -113,7 +92,7 @@ class OutputFormatterStyleStack implements ResetInterface
             return $this->emptyStyle;
         }
 
-        return end($this->styles);
+        return $this->styles[\count($this->styles) - 1];
     }
 
     /**

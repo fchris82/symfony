@@ -13,19 +13,20 @@ namespace Symfony\Component\Console\Tests\Formatter;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
-class OutputFormatterTest extends TestCase
+class TokenizeOutputFormatterTest extends TestCase
 {
     public function testEmptyTag()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
         $this->assertEquals('foo<>bar', $formatter->format('foo<>bar'));
     }
 
     public function testLGCharEscaping()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals('foo<bar', $formatter->format('foo\\<bar'));
         $this->assertEquals('foo << bar', $formatter->format('foo << bar'));
@@ -42,7 +43,7 @@ class OutputFormatterTest extends TestCase
 
     public function testBundledStyles()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertTrue($formatter->hasStyle('error'));
         $this->assertTrue($formatter->hasStyle('info'));
@@ -69,7 +70,7 @@ class OutputFormatterTest extends TestCase
 
     public function testNestedStyles()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals(
             "\033[37;41msome \033[39;49m\033[32msome info\033[39m\033[37;41m error\033[39;49m",
@@ -79,7 +80,7 @@ class OutputFormatterTest extends TestCase
 
     public function testAdjacentStyles()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals(
             "\033[37;41msome error\033[39;49m\033[32msome info\033[39m",
@@ -89,7 +90,7 @@ class OutputFormatterTest extends TestCase
 
     public function testStyleMatchingNotGreedy()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals(
             "(\033[32m>=2.0,<2.3\033[39m)",
@@ -99,22 +100,22 @@ class OutputFormatterTest extends TestCase
 
     public function testStyleEscaping()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals(
             "(\033[32mz>=2.0,<<<a2.3\\\033[39m)",
-            $formatter->format('(<info>'.$formatter->escape('z>=2.0,<\\<<a2.3\\').'</info>)')
+            $formatter->format('(<info>'.OutputFormatter::escape('z>=2.0,<\\<<a2.3\\').'</info>)')
         );
 
         $this->assertEquals(
             "\033[32m<error>some error</error>\033[39m",
-            $formatter->format('<info>'.$formatter->escape('<error>some error</error>').'</info>')
+            $formatter->format('<info>'.OutputFormatter::escape('<error>some error</error>').'</info>')
         );
     }
 
     public function testDeepNestedStyles()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals(
             "\033[37;41merror\033[39;49m\033[32minfo\033[39m\033[33mcomment\033[39m\033[37;41merror\033[39;49m",
@@ -124,10 +125,9 @@ class OutputFormatterTest extends TestCase
 
     public function testNewStyle()
     {
-        $formatter = new OutputFormatter(true);
-
         $style = new OutputFormatterStyle('blue', 'white');
-        $formatter->setStyle('test', $style);
+
+        $formatter = new TokenizeOutputFormatter(true, ['test' => $style]);
 
         $this->assertEquals($style, $formatter->getStyle('test'));
         $this->assertNotEquals($style, $formatter->getStyle('info'));
@@ -138,9 +138,21 @@ class OutputFormatterTest extends TestCase
         $this->assertEquals("\033[34;47msome \033[39;49m\033[34;47mcustom\033[39;49m\033[34;47m msg\033[39;49m", $formatter->format('<test>some <b>custom</b> msg</test>'));
     }
 
+    /**
+     * @expectedException \Symfony\Component\Console\Exception\InvalidArgumentException
+     */
+    public function testMissingStyle()
+    {
+        $style = new OutputFormatterStyle(null, null);
+
+        $formatter = new TokenizeOutputFormatter(true, ['test' => $style]);
+
+        $formatter->getStyle('unknwon');
+    }
+
     public function testRedefineStyle()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $style = new OutputFormatterStyle('blue', 'white');
         $formatter->setStyle('info', $style);
@@ -150,36 +162,25 @@ class OutputFormatterTest extends TestCase
 
     public function testInlineStyle()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals("\033[34;41msome text\033[39;49m", $formatter->format('<fg=blue;bg=red>some text</>'));
         $this->assertEquals("\033[34;41msome text\033[39;49m", $formatter->format('<fg=blue;bg=red>some text</fg=blue;bg=red>'));
     }
 
     /**
-     * @param string      $tag
-     * @param string|null $expected
-     * @param string|null $input
+     * @param string $tag
+     * @param string $expected
+     * @param string $input
      *
      * @dataProvider provideInlineStyleOptionsCases
      */
-    public function testInlineStyleOptions($tag, $expected = null, $input = null)
+    public function testInlineStyleOptions($tag, $expected = '', $input = '')
     {
         $styleString = substr($tag, 1, -1);
-        $formatter = new OutputFormatter(true);
-        $method = new \ReflectionMethod($formatter, 'createStyleFromString');
-        $method->setAccessible(true);
-        $result = $method->invoke($formatter, $styleString);
-        if (null === $expected) {
-            $this->assertFalse($result);
-            $expected = $tag.$input.'</'.$styleString.'>';
-            $this->assertSame($expected, $formatter->format($expected));
-        } else {
-            /* @var OutputFormatterStyle $result */
-            $this->assertInstanceOf(OutputFormatterStyle::class, $result);
-            $this->assertSame($expected, $formatter->format($tag.$input.'</>'));
-            $this->assertSame($expected, $formatter->format($tag.$input.'</'.$styleString.'>'));
-        }
+        $formatter = new TokenizeOutputFormatter(true);
+        $this->assertSame($expected, $formatter->format($tag.OutputFormatter::escape($input).'</>'));
+        $this->assertSame($expected, $formatter->format($tag.OutputFormatter::escape($input).'</'.$styleString.'>'));
     }
 
     public function provideInlineStyleOptionsCases()
@@ -208,29 +209,29 @@ class OutputFormatterTest extends TestCase
 
     public function testNonStyleTag()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
-        $this->assertEquals("\033[32msome \033[39m\033[32m<tag>\033[39m\033[32m \033[39m\033[32m<setting=value>\033[39m\033[32m styled \033[39m\033[32m<p>\033[39m\033[32msingle-char tag\033[39m\033[32m</p>\033[39m", $formatter->format('<info>some <tag> <setting=value> styled <p>single-char tag</p></info>'));
+        $this->assertEquals("\033[32msome   styled single-char tag\033[39m", $formatter->format('<info>some <tag> <setting=value> styled <p>single-char tag</p></info>'));
     }
 
     public function testFormatLongString()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
         $long = str_repeat('\\', 14000);
         $this->assertEquals("\033[37;41msome error\033[39;49m".$long, $formatter->format('<error>some error</error>'.$long));
     }
 
     public function testFormatToStringObject()
     {
-        $formatter = new OutputFormatter(false);
+        $formatter = new TokenizeOutputFormatter(false);
         $this->assertEquals(
-            'some info', $formatter->format(new TableCell())
+            'some info', $formatter->format(new TokenizeTableCell())
         );
     }
 
     public function testFormatterHasStyles()
     {
-        $formatter = new OutputFormatter(false);
+        $formatter = new TokenizeOutputFormatter(false);
 
         $this->assertTrue($formatter->hasStyle('error'));
         $this->assertTrue($formatter->hasStyle('info'));
@@ -247,8 +248,8 @@ class OutputFormatterTest extends TestCase
         putenv('TERMINAL_EMULATOR='.$terminalEmulator);
 
         try {
-            $this->assertEquals($expectedDecoratedOutput, (new OutputFormatter(true))->format($input));
-            $this->assertEquals($expectedNonDecoratedOutput, (new OutputFormatter(false))->format($input));
+            $this->assertEquals($expectedDecoratedOutput, (new TokenizeOutputFormatter(true))->format($input));
+            $this->assertEquals($expectedNonDecoratedOutput, (new TokenizeOutputFormatter(false))->format($input));
         } finally {
             putenv('TERMINAL_EMULATOR'.($prevTerminalEmulator ? "=$prevTerminalEmulator" : ''));
         }
@@ -262,6 +263,7 @@ class OutputFormatterTest extends TestCase
             ['<comment>some comment</comment>', 'some comment', "\033[33msome comment\033[39m"],
             ['<question>some question</question>', 'some question', "\033[30;46msome question\033[39;49m"],
             ['<fg=red>some text with inline style</>', 'some text with inline style', "\033[31msome text with inline style\033[39m"],
+            ['<fg=red>unclosed tag', 'unclosed tag', "\033[31munclosed tag\033[39m"],
             ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL</>', 'some URL', "\033]8;;idea://open/?file=/path/SomeFile.php&line=12\033\\some URL\033]8;;\033\\"],
             ['<href=idea://open/?file=/path/SomeFile.php&line=12>some URL</>', 'some URL', 'some URL', 'JetBrains-JediTerm'],
         ];
@@ -269,45 +271,45 @@ class OutputFormatterTest extends TestCase
 
     public function testContentWithLineBreaks()
     {
-        $formatter = new OutputFormatter(true);
+        $formatter = new TokenizeOutputFormatter(true);
 
         $this->assertEquals(<<<EOF
-\033[32m
-some text\033[39m
+\033[32m\033[39m
+\033[32msome text\033[39m
 EOF
             , $formatter->format(<<<'EOF'
 <info>
 some text</info>
 EOF
-            ));
+        ));
 
         $this->assertEquals(<<<EOF
-\033[32msome text
-\033[39m
+\033[32msome text\033[39m
+\033[32m\033[39m
 EOF
             , $formatter->format(<<<'EOF'
 <info>some text
 </info>
 EOF
-            ));
+        ));
 
         $this->assertEquals(<<<EOF
-\033[32m
-some text
-\033[39m
+\033[32m\033[39m
+\033[32msome text\033[39m
+\033[32m\033[39m
 EOF
             , $formatter->format(<<<'EOF'
 <info>
 some text
 </info>
 EOF
-            ));
+        ));
 
         $this->assertEquals(<<<EOF
-\033[32m
-some text
-more text
-\033[39m
+\033[32m\033[39m
+\033[32msome text\033[39m
+\033[32mmore text\033[39m
+\033[32m\033[39m
 EOF
             , $formatter->format(<<<'EOF'
 <info>
@@ -315,33 +317,20 @@ some text
 more text
 </info>
 EOF
-            ));
+        ));
     }
 
-    public function testFormatAndWrap()
+    /**
+     * @expectedException \Symfony\Component\Console\Exception\FormatterTooLargeInputException
+     */
+    public function testTooLargeInput()
     {
-        $formatter = new OutputFormatter(true);
-
-        $this->assertSame("fo\no\e[37;41mb\e[39;49m\n\e[37;41mar\e[39;49m\nba\nz", $formatter->formatAndWrap('foo<error>bar</error> baz', 2));
-        $this->assertSame("pr\ne \e[37;41m\e[39;49m\n\e[37;41mfo\e[39;49m\n\e[37;41mo \e[39;49m\n\e[37;41mba\e[39;49m\n\e[37;41mr \e[39;49m\n\e[37;41mba\e[39;49m\n\e[37;41mz\e[39;49m \npo\nst", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 2));
-        $this->assertSame("pre\e[37;41m\e[39;49m\n\e[37;41mfoo\e[39;49m\n\e[37;41mbar\e[39;49m\n\e[37;41mbaz\e[39;49m\npos\nt", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 3));
-        $this->assertSame("pre \e[37;41m\e[39;49m\n\e[37;41mfoo \e[39;49m\n\e[37;41mbar \e[39;49m\n\e[37;41mbaz\e[39;49m \npost", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 4));
-        $this->assertSame("pre \e[37;41mf\e[39;49m\n\e[37;41moo ba\e[39;49m\n\e[37;41mr baz\e[39;49m\npost", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 5));
-        $this->assertSame("Lore\nm \e[37;41mip\e[39;49m\n\e[37;41msum\e[39;49m \ndolo\nr \e[32msi\e[39m\n\e[32mt\e[39m am\net", $formatter->formatAndWrap('Lorem <error>ipsum</error> dolor <info>sit</info> amet', 4));
-        $this->assertSame("Lorem \e[37;41mip\e[39;49m\n\e[37;41msum\e[39;49m dolo\nr \e[32msit\e[39m am\net", $formatter->formatAndWrap('Lorem <error>ipsum</error> dolor <info>sit</info> amet', 8));
-        $this->assertSame("Lorem \e[37;41mipsum\e[39;49m dolor \e[32m\e[39m\n\e[32msit\e[39m, \e[37;41mamet\e[39;49m et \e[32mlauda\e[39m\n\e[32mntium\e[39m architecto", $formatter->formatAndWrap('Lorem <error>ipsum</error> dolor <info>sit</info>, <error>amet</error> et <info>laudantium</info> architecto', 18));
-
-        $formatter = new OutputFormatter();
-
-        $this->assertSame("fo\nob\nar\nba\nz", $formatter->formatAndWrap('foo<error>bar</error> baz', 2));
-        $this->assertSame("pr\ne \nfo\no \nba\nr \nba\nz \npo\nst", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 2));
-        $this->assertSame("pre\nfoo\nbar\nbaz\npos\nt", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 3));
-        $this->assertSame("pre \nfoo \nbar \nbaz \npost", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 4));
-        $this->assertSame("pre f\noo ba\nr baz\npost", $formatter->formatAndWrap('pre <error>foo bar baz</error> post', 5));
+        $formatter = new TokenizeOutputFormatter();
+        $formatter->format(str_repeat('a ', 10000));
     }
 }
 
-class TableCell
+class TokenizeTableCell
 {
     public function __toString()
     {

@@ -12,7 +12,7 @@
 namespace Symfony\Component\Console\Tests\Output;
 
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\StreamableInputInterface;
 use Symfony\Component\Console\Output\ConsoleSectionOutput;
@@ -37,7 +37,7 @@ class ConsoleSectionOutputTest extends TestCase
     public function testClearAll()
     {
         $sections = [];
-        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output->writeln('Foo'.PHP_EOL.'Bar');
         $output->clear();
@@ -49,7 +49,7 @@ class ConsoleSectionOutputTest extends TestCase
     public function testClearNumberOfLines()
     {
         $sections = [];
-        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output->writeln("Foo\nBar\nBaz\nFooBar");
         $output->clear(2);
@@ -62,8 +62,8 @@ class ConsoleSectionOutputTest extends TestCase
     {
         $output = new StreamOutput($this->stream);
         $sections = [];
-        $output1 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
-        $output2 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output1 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
+        $output2 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output2->writeln('Foo');
         $output2->writeln('Bar');
@@ -79,8 +79,8 @@ class ConsoleSectionOutputTest extends TestCase
     {
         $output = new StreamOutput($this->stream);
         $sections = [];
-        $output1 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
-        $output2 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output1 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
+        $output2 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output2->writeln(PHP_EOL.'foo');
         $output2->clear(1);
@@ -94,7 +94,7 @@ class ConsoleSectionOutputTest extends TestCase
     public function testOverwrite()
     {
         $sections = [];
-        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output->writeln('Foo');
         $output->overwrite('Bar');
@@ -106,7 +106,7 @@ class ConsoleSectionOutputTest extends TestCase
     public function testOverwriteMultipleLines()
     {
         $sections = [];
-        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output->writeln('Foo'.PHP_EOL.'Bar'.PHP_EOL.'Baz');
         $output->overwrite('Bar');
@@ -118,8 +118,8 @@ class ConsoleSectionOutputTest extends TestCase
     public function testAddingMultipleSections()
     {
         $sections = [];
-        $output1 = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
-        $output2 = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output1 = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
+        $output2 = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $this->assertCount(2, $sections);
     }
@@ -128,8 +128,8 @@ class ConsoleSectionOutputTest extends TestCase
     {
         $output = new StreamOutput($this->stream);
         $sections = [];
-        $output1 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
-        $output2 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output1 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
+        $output2 = new ConsoleSectionOutput($output->getStream(), $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         $output1->writeln('Foo');
         $output2->writeln('Bar');
@@ -152,7 +152,7 @@ class ConsoleSectionOutputTest extends TestCase
         $input->expects($this->once())->method('getStream')->willReturn($inputStream);
 
         $sections = [];
-        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new OutputFormatter());
+        $output = new ConsoleSectionOutput($this->stream, $sections, OutputInterface::VERBOSITY_NORMAL, true, new TokenizeOutputFormatter());
 
         (new QuestionHelper())->ask($input, $output, new Question('What\'s your favorite super hero?'));
         $output->clear();

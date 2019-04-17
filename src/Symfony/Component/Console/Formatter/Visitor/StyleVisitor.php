@@ -30,6 +30,9 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
 {
     /** @var array|OutputFormatterStyle[] */
     protected $styles = [];
+    /** @var array|bool[] */
+    protected $isStyleTagStack = [];
+    /** @var OutputFormatterStyleStack */
     protected $styleStack;
     /** @var OutputFormatterStyleInterface */
     protected $currentStyle;
@@ -125,24 +128,28 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
 
         // If something was built in `visitTag()` method...
         if (null !== $this->currentStyle) {
+            array_push($this->isStyleTagStack, true);
             // If something was started, we close it before "open" the new style.
             if ($this->styleStack->count() > 0) {
                 $prev = $this->styleStack->getCurrent();
                 $fullTagToken->insertBefore(new DecorationToken($prev->close()));
             }
-            $this->styleStack->push(\count($this->tagStack), $this->currentStyle);
+            $this->styleStack->push($this->currentStyle);
             $fullTagToken->insertAfter(new DecorationToken($this->currentStyle->start()));
             // reset
             $this->currentStyle = null;
+        } elseif ($fullTagToken->isStartTag()) {
+            array_push($this->isStyleTagStack, false);
         }
         if ($fullTagToken->isCloseTag()) {
-            $currentStyle = $this->styleStack->pop(\count($this->tagStack));
-            if ($currentStyle) {
+            $isStyleTag = array_pop($this->isStyleTagStack);
+            if ($isStyleTag) {
+                $currentStyle = $this->styleStack->pop();
                 $fullTagToken->insertBefore(new DecorationToken($currentStyle->close()));
-            }
-            if ($this->styleStack->count() > 0) {
-                $prev = $this->styleStack->getCurrent();
-                $fullTagToken->insertAfter(new DecorationToken($prev->start()));
+                if ($this->styleStack->count() > 0) {
+                    $prev = $this->styleStack->getCurrent();
+                    $fullTagToken->insertAfter(new DecorationToken($prev->start()));
+                }
             }
         }
 
@@ -171,10 +178,19 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
                     break;
             }
         } else {
+            // Reposition because of unclosed tags: <info>...<comment>...</info> (Missing </comment>)
             if (\array_key_exists($tagToken->getName(), $this->styles)) {
                 $style = $this->styles[$tagToken->getName()];
-                $this->styleStack->popByStyle($style);
-                $tagToken->getParent()->insertBefore(new DecorationToken($style->close()));
+                $currentStyle = $this->styleStack->getCurrent();
+                while ($style->start().$style->close() != $currentStyle->start().$currentStyle->close()) {
+                    if (array_pop($this->isStyleTagStack)) {
+                        $this->styleStack->pop();
+                    }
+                    $currentStyle = $this->styleStack->getCurrent();
+                }
+                while (!$this->isStyleTagStack[\count($this->isStyleTagStack)-1]) {
+                    array_pop($this->isStyleTagStack);
+                }
             }
         }
     }

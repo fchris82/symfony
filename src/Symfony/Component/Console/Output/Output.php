@@ -11,7 +11,7 @@
 
 namespace Symfony\Component\Console\Output;
 
-use Symfony\Component\Console\Formatter\OutputFormatter;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterInterface;
 
 /**
@@ -40,7 +40,7 @@ abstract class Output implements OutputInterface
     public function __construct(?int $verbosity = self::VERBOSITY_NORMAL, bool $decorated = false, OutputFormatterInterface $formatter = null)
     {
         $this->verbosity = null === $verbosity ? self::VERBOSITY_NORMAL : $verbosity;
-        $this->formatter = $formatter ?: new OutputFormatter();
+        $this->formatter = $formatter ?: new TokenizeOutputFormatter();
         $this->formatter->setDecorated($decorated);
     }
 

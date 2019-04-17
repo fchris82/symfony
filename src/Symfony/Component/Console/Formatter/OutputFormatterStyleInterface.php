@@ -15,7 +15,6 @@ namespace Symfony\Component\Console\Formatter;
  * Formatter style interface for defining styles.
  *
  * @author Konstantin Kudryashov <ever.zet@gmail.com>
- * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
 interface OutputFormatterStyleInterface
 {
@@ -53,16 +52,11 @@ interface OutputFormatterStyleInterface
     public function setOptions(array $options);
 
     /**
-     * Init style decoration, the \033[*m strings.
+     * Applies the style to a given text.
+     *
+     * @param string $text The text to style
      *
      * @return string
      */
-    public function start(): string;
-
-    /**
-     * Close style decoration, the \033[*m strings.
-     *
-     * @return string
-     */
-    public function close(): string;
+    public function apply($text);
 }

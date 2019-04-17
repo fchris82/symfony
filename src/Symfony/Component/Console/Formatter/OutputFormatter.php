@@ -12,31 +12,18 @@
 namespace Symfony\Component\Console\Formatter;
 
 use Symfony\Component\Console\Exception\InvalidArgumentException;
-use Symfony\Component\Console\Formatter\Visitor\DecoratorVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitor\FormatterVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitor\HrefVisitor;
-use Symfony\Component\Console\Formatter\Visitor\OutputBuildVisitorInterface;
-use Symfony\Component\Console\Formatter\Visitor\PrintVisitor;
-use Symfony\Component\Console\Formatter\Visitor\StyleVisitor;
-use Symfony\Component\Console\Formatter\Visitor\VisitorIterator;
-use Symfony\Component\Console\Formatter\Visitor\WrapperVisitor;
-use Symfony\Component\Console\Helper\Helper;
 
 /**
  * Formatter class for console output.
  *
  * @author Konstantin Kudryashov <ever.zet@gmail.com>
  * @author Roland Franssen <franssen.roland@gmail.com>
- * @author Krisztián Ferenczi <ferenczi.krisztian@gmail.com>
  */
-class OutputFormatter implements TokenizeOutputFormatterInterface
+class OutputFormatter implements WrappableOutputFormatterInterface
 {
-    /** @var bool */
-    protected $decorated;
-    /** @var Lexer */
-    protected $lexer;
-    /** @var VisitorIterator|FormatterVisitorInterface[] */
-    protected $visitorIterator;
+    private $decorated;
+    private $styles = [];
+    private $styleStack;
 
     /**
      * Escapes "<" special char in given text.
@@ -82,37 +69,17 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
     public function __construct(bool $decorated = false, array $styles = [])
     {
         $this->decorated = $decorated;
-        $this->lexer = new Lexer();
-        $this->visitorIterator = new VisitorIterator();
-        $this->initVisitors($styles);
-    }
 
-    public function addVisitor(FormatterVisitorInterface $visitor, int $priority = 0): self
-    {
-        $this->visitorIterator->insert($visitor, $priority);
+        $this->setStyle('error', new OutputFormatterStyle('white', 'red'));
+        $this->setStyle('info', new OutputFormatterStyle('green'));
+        $this->setStyle('comment', new OutputFormatterStyle('yellow'));
+        $this->setStyle('question', new OutputFormatterStyle('black', 'cyan'));
 
-        return $this;
-    }
-
-    protected function initVisitors(array $styles)
-    {
-        if (0 === $this->visitorIterator->count()) {
-            $this->addVisitor(new WrapperVisitor(), 999);
-            $this->addVisitor(new StyleVisitor($styles));
-            $this->addVisitor(new HrefVisitor());
-            $this->addVisitor(new PrintVisitor(), -999);
-        }
-    }
-
-    public function getVisitorByClass($class)
-    {
-        foreach ($this->visitorIterator as $visitor) {
-            if ($visitor instanceof $class) {
-                return $visitor;
-            }
+        foreach ($styles as $name => $style) {
+            $this->setStyle($name, $style);
         }
 
-        throw new \InvalidArgumentException(sprintf('Missing visitor class: `%s`', $class));
+        $this->styleStack = new OutputFormatterStyleStack();
     }
 
     /**
@@ -136,9 +103,7 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
      */
     public function setStyle($name, OutputFormatterStyleInterface $style)
     {
-        /** @var StyleVisitor $styleVisitor */
-        $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
-        $styleVisitor->setStyle($name, $style);
+        $this->styles[strtolower($name)] = $style;
     }
 
     /**
@@ -146,10 +111,7 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
      */
     public function hasStyle($name)
     {
-        /** @var StyleVisitor $styleVisitor */
-        $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
-
-        return $styleVisitor->hasStyle($name);
+        return isset($this->styles[strtolower($name)]);
     }
 
     /**
@@ -157,10 +119,11 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
      */
     public function getStyle($name)
     {
-        /** @var StyleVisitor $styleVisitor */
-        $styleVisitor = $this->getVisitorByClass(StyleVisitor::class);
+        if (!$this->hasStyle($name)) {
+            throw new InvalidArgumentException(sprintf('Undefined style: %s', $name));
+        }
 
-        return $styleVisitor->getStyle($name);
+        return $this->styles[strtolower($name)];
     }
 
     /**
@@ -168,42 +131,154 @@ class OutputFormatter implements TokenizeOutputFormatterInterface
      */
     public function format($message)
     {
-        $fullTextTokens = $this->lexer->tokenize((string) $message);
-        /** @var FormatterVisitorInterface $visitor */
-        foreach ($this->visitorIterator as $visitor) {
-            // Skips the decorator visitors
-            if (!$this->isDecorated() && $visitor instanceof DecoratorVisitorInterface) {
-                continue;
-            }
-            $fullTextTokens->accept($visitor);
-        }
-        if ($visitor instanceof OutputBuildVisitorInterface) {
-            $output = $visitor->getOutput();
-            if (false !== strpos($output, "\0")) {
-                return strtr($output, "\0", '\\');
-            }
-
-            return $output;
-        }
-
-        throw new InvalidArgumentException(sprintf('The last visitor should be implemented the `%s` interface!', OutputBuildVisitorInterface::class));
+        return $this->formatAndWrap((string) $message, 0);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function removeDecoration($str)
+    public function formatAndWrap(string $message, int $width)
     {
-        // Escape escape
-        $str = str_replace('\\<', "\0", $str);
-        $str = preg_replace(sprintf(
-            "{(<(%s)>|</(%s)?>|\033[^m]+m)}",
-            Helper::FORMAT_TAG_REGEX,
-            Helper::FORMAT_TAG_REGEX
-        ), '', $str);
-        // Unescape escaped < character
-        $str = str_replace("\0", '<', $str);
+        $offset = 0;
+        $output = '';
+        $tagRegex = '[a-z][^<>]*+';
+        $currentLineLength = 0;
+        preg_match_all("#<(($tagRegex) | /($tagRegex)?)>#ix", $message, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[0] as $i => $match) {
+            $pos = $match[1];
+            $text = $match[0];
 
-        return $str;
+            if (0 != $pos && '\\' == $message[$pos - 1]) {
+                continue;
+            }
+
+            // add the text up to the next tag
+            $output .= $this->applyCurrentStyle(substr($message, $offset, $pos - $offset), $output, $width, $currentLineLength);
+            $offset = $pos + \strlen($text);
+
+            // opening tag?
+            if ($open = '/' != $text[1]) {
+                $tag = $matches[1][$i][0];
+            } else {
+                $tag = isset($matches[3][$i][0]) ? $matches[3][$i][0] : '';
+            }
+
+            if (!$open && !$tag) {
+                // </>
+                $this->styleStack->pop();
+            } elseif (false === $style = $this->createStyleFromString($tag)) {
+                $output .= $this->applyCurrentStyle($text, $output, $width, $currentLineLength);
+            } elseif ($open) {
+                $this->styleStack->push($style);
+            } else {
+                $this->styleStack->pop($style);
+            }
+        }
+
+        $output .= $this->applyCurrentStyle(substr($message, $offset), $output, $width, $currentLineLength);
+
+        if (false !== strpos($output, "\0")) {
+            return strtr($output, ["\0" => '\\', '\\<' => '<']);
+        }
+
+        return str_replace('\\<', '<', $output);
+    }
+
+    /**
+     * @return OutputFormatterStyleStack
+     */
+    public function getStyleStack()
+    {
+        return $this->styleStack;
+    }
+
+    /**
+     * Tries to create new style instance from string.
+     *
+     * @return OutputFormatterStyle|false False if string is not format string
+     */
+    private function createStyleFromString(string $string)
+    {
+        if (isset($this->styles[$string])) {
+            return $this->styles[$string];
+        }
+
+        if (!preg_match_all('/([^=]+)=([^;]+)(;|$)/', $string, $matches, PREG_SET_ORDER)) {
+            return false;
+        }
+
+        $style = new OutputFormatterStyle();
+        foreach ($matches as $match) {
+            array_shift($match);
+            $match[0] = strtolower($match[0]);
+
+            if ('fg' == $match[0]) {
+                $style->setForeground(strtolower($match[1]));
+            } elseif ('bg' == $match[0]) {
+                $style->setBackground(strtolower($match[1]));
+            } elseif ('href' === $match[0]) {
+                $style->setHref($match[1]);
+            } elseif ('options' === $match[0]) {
+                preg_match_all('([^,;]+)', strtolower($match[1]), $options);
+                $options = array_shift($options);
+                foreach ($options as $option) {
+                    $style->setOption($option);
+                }
+            } else {
+                return false;
+            }
+        }
+
+        return $style;
+    }
+
+    /**
+     * Applies current style from stack to text, if must be applied.
+     */
+    private function applyCurrentStyle(string $text, string $current, int $width, int &$currentLineLength): string
+    {
+        if ('' === $text) {
+            return '';
+        }
+
+        if (!$width) {
+            return $this->isDecorated() ? $this->styleStack->getCurrent()->apply($text) : $text;
+        }
+
+        if (!$currentLineLength && '' !== $current) {
+            $text = ltrim($text);
+        }
+
+        if ($currentLineLength) {
+            $prefix = substr($text, 0, $i = $width - $currentLineLength)."\n";
+            $text = substr($text, $i);
+        } else {
+            $prefix = '';
+        }
+
+        preg_match('~(\\n)$~', $text, $matches);
+        $text = $prefix.preg_replace('~([^\\n]{'.$width.'})\\ *~', "\$1\n", $text);
+        $text = rtrim($text, "\n").($matches[1] ?? '');
+
+        if (!$currentLineLength && '' !== $current && "\n" !== substr($current, -1)) {
+            $text = "\n".$text;
+        }
+
+        $lines = explode("\n", $text);
+
+        foreach ($lines as $line) {
+            $currentLineLength += \strlen($line);
+            if ($width <= $currentLineLength) {
+                $currentLineLength = 0;
+            }
+        }
+
+        if ($this->isDecorated()) {
+            foreach ($lines as $i => $line) {
+                $lines[$i] = $this->styleStack->getCurrent()->apply($line);
+            }
+        }
+
+        return implode("\n", $lines);
     }
 }
