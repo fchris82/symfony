@@ -26,17 +26,5 @@ use Symfony\Component\Console\Formatter\Token\WordToken;
  */
 interface FormatterVisitorInterface
 {
-    public function visitFullText(FullTextToken $fullTextToken): void;
-
-    public function visitSeparator(SeparatorToken $separatorToken): void;
-
-    public function visitWord(WordToken $wordToken): void;
-
-    public function visitFullTagToken(FullTagToken $fullTagToken): void;
-
-    public function visitTag(TagToken $tagToken): void;
-
-    public function visitEos(EosToken $eosToken): void;
-
-    public function visitDecoration(DecorationToken $decorationToken): void;
+    public function iterate(iterable $tokens);
 }

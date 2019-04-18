@@ -12,6 +12,7 @@
 namespace Symfony\Component\Console\Formatter\Visitor;
 
 use Symfony\Component\Console\Exception\InvalidArgumentException;
+use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleInterface;
 use Symfony\Component\Console\Formatter\OutputFormatterStyleStack;
@@ -95,36 +96,22 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         return $this->styles[strtolower($name)];
     }
 
-    public function visitFullText(FullTextToken $fullTextToken): void
+    protected function getCurrentStyle()
     {
-        parent::visitFullText($fullTextToken);
-    }
-
-    public function visitSeparator(SeparatorToken $separatorToken): void
-    {
-        // We close every line and start a new line
-        if ($this->styleStack->count() && "\n" == $separatorToken->getOriginalStringRepresentation()) {
-            $currentStyle = $this->styleStack->getCurrent();
-            $separatorToken->insertBefore(new DecorationToken($currentStyle->close()));
-            $separatorToken->insertAfter(new DecorationToken($currentStyle->start()));
+        if (!$this->currentStyle) {
+            $this->currentStyle = new OutputFormatterStyle();
         }
+
+        return $this->currentStyle;
     }
 
-    public function visitWord(WordToken $wordToken): void
-    {
-        // do nothing
-    }
-
-    public function visitFullTagToken(FullTagToken $fullTagToken): void
+    protected function handleFullTagToken(FullTagToken $fullTagToken): void
     {
         if ($fullTagToken->isStartTag()) {
             array_push($this->tagStack, $fullTagToken);
         }
 
-        /** @var TagToken $tagToken */
-        foreach ($fullTagToken->getIterator() as $tagToken) {
-            $tagToken->accept($this);
-        }
+        $this->handleTags($fullTagToken);
 
         // If something was built in `visitTag()` method...
         if (null !== $this->currentStyle) {
@@ -132,10 +119,10 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
             // If something was started, we close it before "open" the new style.
             if ($this->styleStack->count() > 0) {
                 $prev = $this->styleStack->getCurrent();
-                $fullTagToken->insertBefore(new DecorationToken($prev->close()));
+                $this->insertItem($this->i, [Lexer::TYPE_DECORATION, $prev->close()]);
             }
             $this->styleStack->push($this->currentStyle);
-            $fullTagToken->insertAfter(new DecorationToken($this->currentStyle->start()));
+            $this->insertItem($this->i+1, [Lexer::TYPE_DECORATION, $this->currentStyle->start()]);
             // reset
             $this->currentStyle = null;
         } elseif ($fullTagToken->isStartTag()) {
@@ -145,10 +132,10 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
             $isStyleTag = array_pop($this->isStyleTagStack);
             if ($isStyleTag) {
                 $currentStyle = $this->styleStack->pop();
-                $fullTagToken->insertBefore(new DecorationToken($currentStyle->close()));
+                $this->insertItem($this->i, [Lexer::TYPE_DECORATION, $currentStyle->close()]);
                 if ($this->styleStack->count() > 0) {
                     $prev = $this->styleStack->getCurrent();
-                    $fullTagToken->insertAfter(new DecorationToken($prev->start()));
+                    $this->insertItem($this->i+1, [Lexer::TYPE_DECORATION, $prev->start()]);
                 }
             }
         }
@@ -158,7 +145,22 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         }
     }
 
-    public function visitTag(TagToken $tagToken): void
+    protected function handleWord(string $value)
+    {
+        // do nothing
+    }
+
+    protected function handleSeparator(string $value)
+    {
+        // We close every line and start a new line
+        if ($this->styleStack->count() && "\n" == $value) {
+            $currentStyle = $this->styleStack->getCurrent();
+            $this->insertItem($this->i, [Lexer::TYPE_DECORATION, $currentStyle->close()]);
+            $this->insertItem($this->i+1, [Lexer::TYPE_DECORATION, $currentStyle->start()]);
+        }
+    }
+
+    protected function handleTag(TagToken $tagToken)
     {
         if ($tagToken->getParent()->isStartTag()) {
             switch ($tagToken->getName()) {
@@ -195,25 +197,16 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         }
     }
 
-    protected function getCurrentStyle()
-    {
-        if (!$this->currentStyle) {
-            $this->currentStyle = new OutputFormatterStyle();
-        }
-
-        return $this->currentStyle;
-    }
-
-    public function visitEos(EosToken $eosToken): void
+    protected function handleEos(EosToken $eosToken)
     {
         // It closes every opened style
         while ($this->styleStack->count()) {
             $style = $this->styleStack->pop();
-            $eosToken->insertBefore(new DecorationToken($style->close()));
+            $this->insertItem($this->i, [Lexer::TYPE_DECORATION, $style->close()]);
         }
     }
 
-    public function visitDecoration(DecorationToken $decorationToken): void
+    protected function handleDecoration(string $value)
     {
         // do nothing
     }

@@ -133,14 +133,14 @@ class TokenizeOutputFormatter implements TokenizeOutputFormatterInterface
      */
     public function format($message)
     {
-        $fullTextTokens = $this->lexer->tokenize((string) $message);
+        $tokenStream = $this->lexer->tokenize((string) $message);
         /** @var FormatterVisitorInterface $visitor */
         foreach ($this->visitorIterator as $visitor) {
             // Skips the decorator visitors
             if (!$this->isDecorated() && $visitor instanceof DecoratorVisitorInterface) {
                 continue;
             }
-            $fullTextTokens->accept($visitor);
+            $visitor->iterate($tokenStream);
         }
         if ($visitor instanceof OutputBuildVisitorInterface) {
             $output = $visitor->getOutput();

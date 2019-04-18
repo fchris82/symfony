@@ -55,6 +55,18 @@ abstract class Token implements TokenInterface
     }
 
     /**
+     * @param string $originalStringRepresentation
+     *
+     * @return $this
+     */
+    public function setOriginalStringRepresentation(string $originalStringRepresentation)
+    {
+        $this->originalStringRepresentation = $originalStringRepresentation;
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getOriginalStringRepresentation(): string

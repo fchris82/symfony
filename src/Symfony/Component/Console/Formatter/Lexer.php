@@ -26,16 +26,21 @@ use Symfony\Component\Console\Helper\Helper;
  */
 class Lexer implements LexerInterface
 {
-    /** @var FullTextToken */
-    protected $fullTextToken;
+    const TYPE_DECORATION = 0;
+    const TYPE_WORD = 1;
+    const TYPE_SEPARATOR = 2;
+
+    protected $tokens = [];
+    protected $tagMaps = [];
 
     /**
      * @param $text
      *
      * @return FullTextToken
      */
-    public function tokenize(string $text): \Traversable
+    public function tokenize(string $text): iterable
     {
+        $this->tokens = [];
         $text = str_replace(["\r\n", "\r"], "\n", $text);
         $cursor = 0;
         // Don't use mb_* functions here! The PREG_OFFSET_CAPTURE gives us "byte" value!
@@ -44,7 +49,6 @@ class Lexer implements LexerInterface
         if ($end > 13200 && \substr_count($text, ' ') > 5000) {
             throw new FormatterTooLargeInputException('The text, what you want to format, is too large. If you really want to format it, you should slice it.');
         }
-        $this->fullTextToken = new FullTextToken($text);
         $pattern = sprintf('{\\\\?<((%1$s)|/(%1$s)?)>}ix', Helper::FORMAT_TAG_REGEX);
         preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE);
         foreach ($matches[0] as $i => $match) {
@@ -61,9 +65,9 @@ class Lexer implements LexerInterface
             // It is an escaped tag:
             // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             if (\strlen($tag) != \strlen($cleanTag)) {
-                $this->fullTextToken->push(new WordToken($cleanTag));
+                $this->tokens[] = [self::TYPE_WORD, $cleanTag];
             } else {
-                $this->fullTextToken->push(new FullTagToken($cleanTag));
+                $this->tokens[] = new FullTagToken($cleanTag);
             }
             // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $cursor = $pos + \strlen($tag);
@@ -77,9 +81,9 @@ class Lexer implements LexerInterface
             }
         }
 
-        $this->fullTextToken->push(new EosToken());
+        $this->tokens[] = new EosToken();
 
-        return $this->fullTextToken;
+        return $this->tokens;
     }
 
     protected function tokenizeTextBlock($textBlock)
@@ -96,9 +100,9 @@ class Lexer implements LexerInterface
             // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $word = \substr($textBlock, $cursor, $pos - $cursor);
             if ('' != $word) {
-                $this->fullTextToken->push(new WordToken($word));
+                $this->tokens[] = [self::TYPE_WORD, $word];
             }
-            $this->fullTextToken->push(new SeparatorToken($separator));
+            $this->tokens[] = [self::TYPE_SEPARATOR, $separator];
             // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $cursor = $pos + \strlen($separator);
         }
@@ -107,7 +111,7 @@ class Lexer implements LexerInterface
             // Don't replace it to mb_* function! The PREG_OFFSET_CAPTURE gives us "byte" value!
             $lastWord = \substr($textBlock, $cursor);
             if ('' != $lastWord) {
-                $this->fullTextToken->push(new WordToken($lastWord));
+                $this->tokens[] = [self::TYPE_WORD, $lastWord];
             }
         }
     }

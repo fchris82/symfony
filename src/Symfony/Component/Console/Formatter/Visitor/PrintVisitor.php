@@ -43,75 +43,48 @@ class PrintVisitor extends AbstractVisitor implements OutputBuildVisitorInterfac
         $this->mode = $mode;
     }
 
-    public function visitFullText(FullTextToken $fullTextToken): void
+    public function iterate(iterable $tokens)
     {
         $this->output = '';
-        parent::visitFullText($fullTextToken);
-    }
-
-    public function visitSeparator(SeparatorToken $separatorToken): void
-    {
-        $this->visit($separatorToken);
-    }
-
-    public function visitWord(WordToken $wordToken): void
-    {
-        $this->visit($wordToken);
-    }
-
-    public function visitFullTagToken(FullTagToken $fullTagToken): void
-    {
-        $this->visit($fullTagToken);
-    }
-
-    public function visitTag(TagToken $tagToken): void
-    {
-        $this->visit($tagToken);
-    }
-
-    public function visitEos(EosToken $eosToken): void
-    {
-        $this->visit($eosToken);
-    }
-
-    public function visitDecoration(DecorationToken $decorationToken): void
-    {
-        $this->visit($decorationToken);
+        parent::iterate($tokens);
     }
 
     /**
-     * @param Token|TokenWithChildren $token
+     * @param $type
+     * @param string|Token $token
      */
-    protected function visit(Token $token)
+    protected function handleToken($type, $token)
     {
-        if ($this->tokenNeedsHandleChildren($token)) {
+        if ($token instanceof Token && $this->tokenNeedsHandleChildren($token)) {
             /** @var TokenInterface $child */
             foreach ($token->getIterator() as $child) {
-                $child->accept($this);
+//                $child->accept($this);
             }
         } else {
+            $string = is_string($token) ? $token : $token->getOriginalStringRepresentation();
+            $mustShow = is_string($token) || $token->getLength() > 0;
             switch ($this->mode) {
                 case self::PRINT_NORMAL:
-                    if ($token->getLength()) {
-                        $this->output .= $token->getOriginalStringRepresentation();
+                    if ($mustShow) {
+                        $this->output .= $string;
                     }
                     break;
                 case self::PRINT_RAW_ESCAPED:
                     // Escaping "tag" words which aren't real tags.
-                    if ($token->getLength()
-                        && '<' == substr($token->getOriginalStringRepresentation(), 0, 1)
-                        && '>' == substr($token->getOriginalStringRepresentation(), -1)
+                    if ($mustShow
+                        && '<' == substr($string, 0, 1)
+                        && '>' == substr($string, -1)
                     ) {
                         $this->output .= '\\';
                     }
-                    // There isn't break here, it is correct!
-                    // no break
+                    $this->output .= $string;
+                    break;
                 case self::PRINT_RAW:
-                    $this->output .= $token->getOriginalStringRepresentation();
+                    $this->output .= $string;
                     break;
                 case self::PRINT_DEBUG:
-                    $this->output .= $token->getLength()
-                        ? $token->getOriginalStringRepresentation()
+                    $this->output .= $mustShow
+                        ? $string
                         : '['.(string) $token.']';
                     break;
             }
@@ -130,5 +103,30 @@ class PrintVisitor extends AbstractVisitor implements OutputBuildVisitorInterfac
     public function getOutput(): string
     {
         return $this->output;
+    }
+
+    protected function handleWord(string $value)
+    {
+        // do nothing
+    }
+
+    protected function handleSeparator(string $value)
+    {
+        // do nothing
+    }
+
+    protected function handleTag(TagToken $tagToken)
+    {
+        // do nothing
+    }
+
+    protected function handleDecoration(string $value)
+    {
+        // do nothing
+    }
+
+    protected function handleEos(EosToken $eosToken)
+    {
+        // do nothing
     }
 }

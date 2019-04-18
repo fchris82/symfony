@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Console\Formatter\Visitor;
 
+use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\Token\DecorationToken;
 use Symfony\Component\Console\Formatter\Token\EosToken;
 use Symfony\Component\Console\Formatter\Token\FullTagToken;
@@ -29,10 +30,10 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
     const START = "\e]8;;";
     const CLOSE = "\e\\";
 
-    public function visitFullText(FullTextToken $fullTextToken): void
+    public function iterate(iterable $tokens)
     {
         if ($this->handlesHrefGracefully()) {
-            parent::visitFullText($fullTextToken);
+            parent::iterate($tokens);
         }
     }
 
@@ -41,47 +42,52 @@ class HrefVisitor extends AbstractVisitor implements DecoratorVisitorInterface
         return !\in_array(getenv('TERMINAL_EMULATOR'), ['JetBrains-JediTerm']);
     }
 
-    public function visitSeparator(SeparatorToken $separatorToken): void
+    public function visitDecoration(DecorationToken $decorationToken): void
     {
         // do nothing
     }
 
-    public function visitWord(WordToken $wordToken): void
+    protected function handleWord(string $value)
     {
         // do nothing
     }
 
-    public function visitTag(TagToken $tagToken): void
+    protected function handleSeparator(string $value)
+    {
+        // do nothing
+    }
+
+    protected function handleTag(TagToken $tagToken)
     {
         if ('href' == $tagToken->getName()) {
             if ($tagToken->getParent()->isStartTag()) {
-                $tagToken->getParent()->insertAfter(new DecorationToken(sprintf(
+                $this->insertItem($this->i+1, [Lexer::TYPE_DECORATION, sprintf(
                     '%s%s%s',
                     self::START,
                     implode(',', $tagToken->getValues()),
                     self::CLOSE
-                )));
+                )]);
             }
             if ($tagToken->getParent()->isCloseTag()) {
-                $tagToken->getParent()->insertBefore(new DecorationToken(self::START.self::CLOSE));
+                $this->insertItem($this->i, [Lexer::TYPE_DECORATION, self::START.self::CLOSE]);
             }
         }
     }
 
-    public function visitEos(EosToken $eosToken): void
+    protected function handleEos(EosToken $eosToken)
     {
         /** @var FullTagToken $unclosedTag */
         while ($unclosedTag = array_pop($this->tagStack)) {
             /** @var TagToken $tag */
             foreach ($unclosedTag->getIterator() as $tag) {
                 if ('href' == $tag->getName()) {
-                    $eosToken->insertBefore(new DecorationToken(self::START.self::CLOSE));
+                    $this->insertItem($this->i, [Lexer::TYPE_DECORATION, self::START.self::CLOSE]);
                 }
             }
         }
     }
 
-    public function visitDecoration(DecorationToken $decorationToken): void
+    protected function handleDecoration(string $value)
     {
         // do nothing
     }

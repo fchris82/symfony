@@ -11,6 +11,7 @@
 
 namespace Symfony\Component\Console\Formatter\Visitor;
 
+use Symfony\Component\Console\Formatter\Lexer;
 use Symfony\Component\Console\Formatter\Token\DecorationToken;
 use Symfony\Component\Console\Formatter\Token\EosToken;
 use Symfony\Component\Console\Formatter\Token\FullTagToken;
@@ -20,6 +21,7 @@ use Symfony\Component\Console\Formatter\Token\TagToken;
 use Symfony\Component\Console\Formatter\Token\Token;
 use Symfony\Component\Console\Formatter\Token\TokenInterface;
 use Symfony\Component\Console\Formatter\Token\WordToken;
+use Symfony\Component\Console\Helper\Helper;
 
 /**
  * Wrapping the text. Eg:.
@@ -67,184 +69,101 @@ class WrapperVisitor extends AbstractVisitor
         $this->setActiveStyle();
     }
 
-    public function visitFullText(FullTextToken $fullTextToken): void
-    {
-        // reset
-        $this->cursor = 0;
-        parent::visitFullText($fullTextToken);
-    }
-
-    public function visitSeparator(SeparatorToken $separatorToken): void
-    {
-        switch ($separatorToken->getOriginalStringRepresentation()) {
-            case "\n":
-                // Insert a new line character
-                $this->fillUp($separatorToken);
-                $this->newLineReset();
-                break;
-            default:
-                $this->cursor += $separatorToken->getLength();
-        }
-    }
-
-    public function visitWord(WordToken $wordToken): void
-    {
-        // If the current line + the new token is longer than the limit.
-        if ($this->activeStyle->getWidth() && $this->cursor + $wordToken->getLength() > $this->activeStyle->getWidth()) {
-            // If the word is needed to cut...
-            if ($this->wordNeedToCut($wordToken)) {
-                $word = $wordToken->getOriginalStringRepresentation();
-                $wordCursor = 0;
-                // Cut the word
-                while ($wordCursor < $wordToken->getLength()) {
-                    // We try to avoid the ugly cuts where few characters are left at the end of the line, eg:
-                    // Ugly:
-                    //      lorem ipsum dolor th  <-- 2 characters left
-                    //      isisaverylongwordthi
-                    //      sisaverylongword
-                    // Better:
-                    //      lorem ipsum dolor     <-- the word started in the next line
-                    //      thisisaverylongwordt
-                    //      hisisaverylongword
-                    // But we use this "beautifier" function if the word cut limit is longer than 5 characters.
-                    $littleBeautifierCorrection = $this->activeStyle->getWordCutLimit() > 5 ? 4 : 0;
-                    if ($this->cursor + $littleBeautifierCorrection >= $this->activeStyle->getWidth()) {
-                        $this->addNewLine($wordToken);
-                    }
-                    $length = min($this->activeStyle->getWidth() - $this->cursor, $wordToken->getLength() - $wordCursor);
-                    $block = \mb_substr($word, $wordCursor, $length);
-                    // Insert new token
-                    $wordToken->insertBefore(new WordToken($block));
-                    $wordCursor += $length;
-                    $this->cursor += $length;
-                }
-                // Remove the original token
-                $wordToken->remove();
-            } else {
-                // If the token doe
-                $this->addNewLine($wordToken);
-                $this->cursor += $wordToken->getLength();
-            }
-        } else {
-            $this->cursor += $wordToken->getLength();
-        }
-    }
-
     /**
      * It decides that the word needs to cut (eg. longer than 1 line).
      *
-     * @param WordToken $token
+     * @param string $word
      *
      * @return bool
      */
-    protected function wordNeedToCut(WordToken $token): bool
+    protected function wordNeedToCut(string $word): bool
     {
-        if ($this->tokenIsAnUrl($token) && !$this->activeStyle->isCutUrls()) {
+        if ($this->wordIsAnUrl($word) && !$this->activeStyle->isCutUrls()) {
             return false;
         }
 
         $cutLength = $this->activeStyle->getWordCutLimit();
 
-        return $cutLength && $token->getLength() > $cutLength;
+        return $cutLength && Helper::strlen($word) > $cutLength;
     }
 
     /**
      * Check the token is an URL.
      *
-     * @param WordToken $token
+     * @param string $word
      *
      * @return bool
      */
-    protected function tokenIsAnUrl(WordToken $token)
+    protected function wordIsAnUrl(string $word)
     {
-        return 0 === strpos($token->getOriginalStringRepresentation(), 'http://')
-            || 0 === strpos($token->getOriginalStringRepresentation(), 'https://');
-    }
-
-    public function visitFullTagToken(FullTagToken $fullTagToken): void
-    {
-        parent::visitFullTagToken($fullTagToken);
-        // If it is a simple close tag: </tag>, we close and delete the superfluous global configuration from the stack.
-        if ($fullTagToken->isCloseTag() && !$fullTagToken->isSelfClosed()) {
-            $depth = \count($this->tagStack);
-            if (\array_key_exists($depth + 1, $this->globalStyleStack)) {
-                unset($this->globalStyleStack[$depth - 1]);
-            }
-            $this->resetActiveStyle();
-        }
-    }
-
-    public function visitTag(TagToken $tagToken): void
-    {
-        if (\in_array($tagToken->getName(), ['wrap', 'nowrap'])) {
-            if ($tagToken->getParent()->isStartTag()) {
-                $style = $this->parseStyle($tagToken);
-                $this->pushStyle($style, $tagToken->getParent()->isSelfClosed());
-            } elseif ($tagToken->getParent()->isCloseTag() && !$tagToken->getParent()->isSelfClosed()) {
-                $depth = \count($this->tagStack);
-                if (\array_key_exists($depth, $this->localStyleStack)) {
-                    unset($this->localStyleStack[$depth]);
-                    $this->resetActiveStyle();
-                }
-            }
-        }
-    }
-
-    public function visitEos(EosToken $eosToken): void
-    {
-        $this->fillUp($eosToken);
-    }
-
-    /** @codeCoverageIgnore */
-    public function visitDecoration(DecorationToken $decorationToken): void
-    {
-        // do nothing
+        return 0 === strpos($word, 'http://')
+            || 0 === strpos($word, 'https://');
     }
 
     /**
      * Fill up, start a new line and reset.
-     *
-     * @param TokenInterface $token
      */
-    protected function addNewLine(TokenInterface $token): void
+    protected function addNewLine(): void
     {
-        $originalToken = $token;
+        $tokenCursor = $this->i;
+        $token = $this->tokens[$tokenCursor];
         // We search the last "token" of the current line.
-        while (!$token->isFirst()) {
-            $prev = $token->prevSibling();
-            if ($prev->keepTogetherWithNextSibling() || $token->keepTogetherWithPreviousSibling()) {
+        while ($tokenCursor > 0) {
+            $prev = $this->tokens[--$tokenCursor];
+            if ($this->checkKeepTogetherWithNextSibling($prev) || $this->checkKeepTogetherWithPreviousSibling($token)) {
                 $token = $prev;
-            } elseif ($prev instanceof SeparatorToken && $prev->isEmpty()) {
-                $prev->remove();
-                $this->cursor -= $prev->getLength();
+            } elseif (' ' == $prev) {
+                $this->removeItem($tokenCursor);
+                $this->cursor--;
                 break;
             } else {
+                $tokenCursor++;
                 break;
             }
         }
         // We try to avoid the:
         //      - start full text width a "\n"
         //      - double "\n"
-        if (!$token->isFirst() && !$this->tokenIsANewLineString($prev)) {
-            $this->fillUp($token);
-            $token->insertBefore(new SeparatorToken("\n"));
+        if ($tokenCursor > 0 && $prev[1] !== "\n") {
+            $this->fillUp($tokenCursor);
+            $this->insertItem($tokenCursor, [Lexer::TYPE_SEPARATOR, "\n"]);
         }
         // reset
-        $this->newLineReset($originalToken->prevSibling());
+        $this->newLineReset($this->i-1);
+    }
+
+    protected function checkKeepTogetherWithNextSibling($token)
+    {
+        if ($token instanceof Token) {
+            return $token->keepTogetherWithNextSibling();
+        }
+
+        return false;
+    }
+
+    protected function checkKeepTogetherWithPreviousSibling($token)
+    {
+        if ($token instanceof Token) {
+            return $token->keepTogetherWithPreviousSibling();
+        }
+
+        return false;
     }
 
     /**
      * Reset the cursor position at the concrete token. It goes back until a new line separator token or the first token.
      *
-     * @param TokenInterface|null $token
+     * @param int|null $position
      */
-    protected function newLineReset(TokenInterface $token = null): void
+    protected function newLineReset(int $position = null): void
     {
         $this->cursor = 0;
-        if (null !== $token) {
-            while ($token instanceof Token && !$token->isFirst() && !$this->tokenIsANewLineString($token)) {
-                $this->cursor += $token->getLength();
-                $token = $token->prevSibling();
+        if (null !== $position) {
+            while ($position>0 && $this->tokens[$position] !== "\n") {
+                /** @var string|Token $token */
+                $token = $this->tokens[$position];
+                $this->cursor += $token instanceof Token ? $token->getLength() : Helper::strlen($token[1]);
+                $position--;
             }
         }
     }
@@ -258,7 +177,7 @@ class WrapperVisitor extends AbstractVisitor
      */
     protected function tokenIsANewLineString(TokenInterface $token): bool
     {
-        return $token instanceof SeparatorToken && "\n" == $token->getOriginalStringRepresentation();
+        return "\n" === $token;
     }
 
     /**
@@ -389,11 +308,14 @@ class WrapperVisitor extends AbstractVisitor
     /**
      * Insert close characters into the line, before the new line character token.
      *
-     * @param TokenInterface $newLineBorderToken
+     * @param int|null $position
      */
-    protected function fillUp(TokenInterface $newLineBorderToken): void
+    protected function fillUp(int $position = null): void
     {
         if ($this->activeStyle->getFillUpString()) {
+            if (null === $position) {
+                $position = $this->i;
+            }
             $missingChars = $this->activeStyle->getWidth() - $this->cursor;
             if ($missingChars > 0 && $missingChars <= $this->activeStyle->getWidth()) {
                 $patternLength = \mb_strlen($this->activeStyle->getFillUpString());
@@ -401,8 +323,103 @@ class WrapperVisitor extends AbstractVisitor
                     $this->activeStyle->getFillUpString(),
                     ceil($missingChars / $patternLength)
                 ), -$missingChars);
-                $newLineBorderToken->insertBefore(new DecorationToken($fillUpChars));
+                $this->insertItem($position, [Lexer::TYPE_DECORATION, $fillUpChars]);
             }
         }
+    }
+
+    protected function handleWord(string $word)
+    {
+        $wordLength = Helper::strlen($word);
+        // If the current line + the new token is longer than the limit.
+        if ($this->activeStyle->getWidth() && $this->cursor + $wordLength > $this->activeStyle->getWidth()) {
+            // If the word is needed to cut...
+            if ($this->wordNeedToCut($word)) {
+                $wordCursor = 0;
+                // Cut the word
+                while ($wordCursor < $wordLength) {
+                    // We try to avoid the ugly cuts where few characters are left at the end of the line, eg:
+                    // Ugly:
+                    //      lorem ipsum dolor th  <-- 2 characters left
+                    //      isisaverylongwordthi
+                    //      sisaverylongword
+                    // Better:
+                    //      lorem ipsum dolor     <-- the word started in the next line
+                    //      thisisaverylongwordt
+                    //      hisisaverylongword
+                    // But we use this "beautifier" function if the word cut limit is longer than 5 characters.
+                    $littleBeautifierCorrection = $this->activeStyle->getWordCutLimit() > 5 ? 4 : 0;
+                    if ($this->cursor + $littleBeautifierCorrection >= $this->activeStyle->getWidth()) {
+                        $this->addNewLine();
+                    }
+                    $length = min($this->activeStyle->getWidth() - $this->cursor, $wordLength - $wordCursor);
+                    $block = \mb_substr($word, $wordCursor, $length);
+                    // Insert new token
+                    $this->insertItem($this->i, [Lexer::TYPE_WORD, $block]);
+                    $wordCursor += $length;
+                    $this->cursor += $length;
+                }
+                // Remove the original token
+                $this->removeItem($this->i);
+            } else {
+                // If the token doe
+                $this->addNewLine();
+                $this->cursor += $wordLength;
+            }
+        } else {
+            $this->cursor += $wordLength;
+        }
+    }
+
+    protected function handleSeparator(string $value)
+    {
+        switch ($value) {
+            case "\n":
+                // Insert a new line character
+                $this->fillUp();
+                $this->newLineReset();
+                break;
+            default:
+                $this->cursor += Helper::strlen($value);
+        }
+    }
+
+    protected function handleFullTagToken(FullTagToken $fullTagToken): void
+    {
+        parent::handleFullTagToken($fullTagToken);
+        // If it is a simple close tag: </tag>, we close and delete the superfluous global configuration from the stack.
+        if ($fullTagToken->isCloseTag() && !$fullTagToken->isSelfClosed()) {
+            $depth = \count($this->tagStack);
+            if (\array_key_exists($depth + 1, $this->globalStyleStack)) {
+                unset($this->globalStyleStack[$depth - 1]);
+            }
+            $this->resetActiveStyle();
+        }
+    }
+
+    protected function handleTag(TagToken $tagToken)
+    {
+        if (\in_array($tagToken->getName(), ['wrap', 'nowrap'])) {
+            if ($tagToken->getParent()->isStartTag()) {
+                $style = $this->parseStyle($tagToken);
+                $this->pushStyle($style, $tagToken->getParent()->isSelfClosed());
+            } elseif ($tagToken->getParent()->isCloseTag() && !$tagToken->getParent()->isSelfClosed()) {
+                $depth = \count($this->tagStack);
+                if (\array_key_exists($depth, $this->localStyleStack)) {
+                    unset($this->localStyleStack[$depth]);
+                    $this->resetActiveStyle();
+                }
+            }
+        }
+    }
+
+    protected function handleDecoration(string $value)
+    {
+        // do nothing
+    }
+
+    protected function handleEos(EosToken $eosToken)
+    {
+        $this->fillUp();
     }
 }
