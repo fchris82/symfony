@@ -34,7 +34,7 @@ class Lexer implements LexerInterface
      *
      * @return FullTextToken
      */
-    public function tokenize(string $text): \Traversable
+    public function tokenize(string $text): iterable
     {
         $text = str_replace(["\r\n", "\r"], "\n", $text);
         $cursor = 0;

@@ -21,7 +21,7 @@ interface LexerInterface
      *
      * @param string $text
      *
-     * @return \Traversable
+     * @return iterable
      */
-    public function tokenize(string $text): \Traversable;
+    public function tokenize(string $text): iterable;
 }
