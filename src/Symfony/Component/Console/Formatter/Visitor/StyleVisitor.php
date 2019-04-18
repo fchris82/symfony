@@ -188,7 +188,7 @@ class StyleVisitor extends AbstractVisitor implements DecoratorVisitorInterface
                     }
                     $currentStyle = $this->styleStack->getCurrent();
                 }
-                while (!$this->isStyleTagStack[\count($this->isStyleTagStack)-1]) {
+                while (!$this->isStyleTagStack[\count($this->isStyleTagStack) - 1]) {
                     array_pop($this->isStyleTagStack);
                 }
             }

@@ -13,8 +13,8 @@ namespace Symfony\Component\Console\Tests\Formatter;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Formatter\OutputFormatter;
-use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Formatter\TokenizeOutputFormatter;
 
 class TokenizeOutputFormatterTest extends TestCase
 {
